@@ -731,7 +731,7 @@ $('rt').onclick=()=>{$('rp').hidden=!$('rp').hidden;if(!$('rp').hidden&&mobile()
    Masa sahibi Spotify'ı bağlar, şarkı seçer. Şarkı bilgisi (id + konum + zaman) Firebase'e yazılır;
    masadaki herkesin tarayıcısı aynı noktadan çalar. Spotify sesi şifreli olduğu için "yayın karışımına"
    katılamaz: her dinleyici kendi cihazında çalar (Premium'lu ve bağlıysa tam şarkı, değilse gömülü oynatıcı). */
-const SPOTIFY_CLIENT_ID='BURAYA';   // developer.spotify.com/dashboard → uygulama → Client ID
+const SPOTIFY_CLIENT_ID='420e13ae9ea7494f970edad74b10aada';   // developer.spotify.com/dashboard → uygulama → Client ID
 const SP_SCOPES='streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
 const SP_REDIR=location.origin+location.pathname;   // Spotify panelindeki Redirect URI ile birebir aynı olmalı
 let spTok=null,spRef=null,spExp=0,spPlayer=null,spDev=null,spReady=false,spLoading=false,spFail=false,music=null,srvOff=0,mEmbed='',spAct=false;
