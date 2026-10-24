@@ -80,19 +80,40 @@ input{font:inherit;background:#101014;color:var(--ink);border:1px solid #34343c;
 .row button{padding:1.4cqw 3cqw}
 button:disabled{opacity:.5;cursor:default}
 #toast{position:absolute;left:4cqw;right:4cqw;top:2%;display:flex;gap:2cqw;align-items:center;flex-wrap:wrap;justify-content:center;background:#14141a;border:1px solid var(--glow);border-radius:14px;padding:3cqw;z-index:7;font-size:clamp(11px,3cqw,13px)}
+.gate{overflow:auto}
+#lobby{display:flex;flex-direction:column;gap:3cqw;align-items:center;width:100%}
+#lobby label{color:var(--dim);font-size:clamp(11px,2.8cqw,13px)}
+input[type=checkbox]{width:auto;vertical-align:middle}
+#tl{width:min(80cqw,380px);max-height:30vh;overflow:auto;color:var(--dim);font-size:clamp(11px,2.8cqw,13px)}
+#chat{display:flex;flex-direction:column;position:fixed;left:8px;top:12%;bottom:150px;width:min(70vw,300px);background:rgba(10,10,14,.92);border:1px solid #2a2a32;border-radius:12px;z-index:4;font-size:13px}
+#msgs{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:6px;word-break:break-word;color:var(--ink)}
+#msgs b{color:var(--glow)}
+.cin{display:flex;gap:6px;padding:8px;border-top:1px solid #2a2a32}
+.cin input{flex:1;min-width:0;width:auto;padding:8px;border-radius:8px;text-align:left}
+.cin button{padding:6px 12px}
+@media(min-width:960px){#chat{position:static;align-self:stretch;margin:16px 0 16px 16px;width:300px}#ct{display:none}}
+.cat{position:absolute;left:0;top:19%;animation:roam 18s linear infinite alternate}
+.cat canvas{display:block;width:80px;height:45px;image-rendering:pixelated;animation:flip 36s steps(1) infinite}
+.cl{display:block;text-align:center;color:var(--glow);font-size:11px;letter-spacing:.1em;margin-bottom:2px}
+@keyframes roam{from{transform:translateX(-25cqw)}to{transform:translateX(105cqw)}}
+@keyframes flip{0%{transform:scaleX(1)}50%{transform:scaleX(-1)}}
+@media (prefers-reduced-motion:reduce){.cat,.cat canvas{animation:none}.cat{left:40%}}
 </style>
 </head>
 <body>
+<aside id="chat" hidden><div id="msgs"></div><div class="cin"><input id="ci" maxlength="300" placeholder="Mesaj yaz…" aria-label="Mesaj"><button id="cs">Gönder</button></div></aside>
 <div class="app" id="app">
   <div class="lamp"></div><div class="cone"></div><div class="shade"></div>
   <h1 id="title">BİR MASA KUR. SESİN YETER.</h1>
   <div id="sub"></div>
   <div class="table"></div><div class="candle"></div>
+  <div class="cat"><span class="cl">Pascal</span><canvas id="cv" width="16" height="9"></canvas></div>
   <div id="glasses"></div><div id="chairs"></div><div id="seats"></div>
   <div class="ui" id="ui">
     <div class="link" id="link"></div>
     <button id="mic" class="on">Mikrofon açık</button>
     <button id="copy">Linki kopyala</button>
+    <button id="ct">Sohbet</button>
     <button id="ol">Çevrimiçi (0)</button>
     <button id="leave">Masadan kalk</button>
   </div>
@@ -100,13 +121,20 @@ button:disabled{opacity:.5;cursor:default}
   <div class="gate" id="gate">
     <h2 id="gt">Masana otur</h2>
     <p id="gp">Masayı kur, linki arkadaşlarına gönder. Linke tıklayan herkes masaya yürüyüp oturur, sen başköşede kalırsın.</p>
+    <input id="nm" placeholder="Takma adın (gerçek adın değil)" maxlength="16" aria-label="Takma ad" hidden>
     <button class="g" id="go">Google ile devam et</button>
+    <div id="lobby" hidden>
+      <input id="tp" placeholder="Konu: ne konuşulsun?" maxlength="60" aria-label="Konu">
+      <label><input type="checkbox" id="pv"> Özel masa (listede görünmez, sadece linkle girilir)</label>
+      <button class="g" id="mk">Masayı kur</button>
+      <div id="tl"></div>
+    </div>
   </div>
 </div>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getDatabase,ref,set,remove,push,onValue,onChildAdded,onDisconnect,runTransaction} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+import {getDatabase,ref,get,set,remove,push,onValue,onChildAdded,onDisconnect,runTransaction} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
 // ===== BURAYI DOLDUR: Firebase Console > Proje ayarları > Web uygulaması > firebaseConfig =====
 const firebaseConfig={apiKey:"AIzaSyCUZpGWJJrTsTOJ6yI9szXh6yadVycY7yc",authDomain:"masa-5d0bd.firebaseapp.com",databaseURL:"https://masa-5d0bd-default-rtdb.firebaseio.com",projectId:"masa-5d0bd",appId:"1:152797830336:web:652e7dd582fe857b12e125"};
@@ -114,6 +142,7 @@ const firebaseConfig={apiKey:"AIzaSyCUZpGWJJrTsTOJ6yI9szXh6yadVycY7yc",authDomai
 
 const $=i=>document.getElementById(i);
 const mk=cl=>{const d=document.createElement('div');d.className=cl;return d};
+const rid=n=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>(b%36).toString(36)).join('');
 const TOP=26,H=42,half=y=>7+15*(y-TOP)/H,K=y=>.6+(y-24)*.0105;
 const S=[{x:50,y:24,c:'H'}];
 [33,42,51,60].forEach(y=>{const o=half(y)+6*K(y);S.push({x:50-o,y,c:'L'},{x:50+o,y,c:'R'})});
@@ -153,7 +182,7 @@ function unseat(p){
 }
 function status(){
   const n=Object.keys(P).length;$('sub').style.display='block';
-  $('sub').textContent=n+' / 10 kişi masada';
+  $('sub').textContent=(topic?'“'+topic+'” · ':'')+n+' / 10 kişi';
   $('title').textContent=n<10?'MASA KURULDU. '+(10-n)+' SANDALYE BOŞ.':'MASA DOLDU.';
 }
 function gate(t,p,b,show=true){$('gt').textContent=t;$('gp').textContent=p;$('go').textContent=b;$('gate').style.display=show?'flex':'none';$('ui').style.display=show?'none':'flex'}
@@ -165,7 +194,7 @@ function meter(stream,id){
   const an=ctx.createAnalyser();an.fftSize=512;ctx.createMediaStreamSource(stream).connect(an);
   meters[id]={an,buf:new Uint8Array(512)};
 }
-let micOn=true,localStream=null,sid,room=null;
+let micOn=true,localStream=null,sid,room=null,topic='',meta=null;
 (function loop(){
   for(const id in meters){const m=meters[id];m.an.getByteTimeDomainData(m.buf);let x=0;for(const v of m.buf)x=Math.max(x,Math.abs(v-128));
     const p=P[id];if(p)p.el.classList.toggle('talk',x>14&&(id!==sid||micOn))}
@@ -177,15 +206,17 @@ let app,auth,db,user,myName='Misafir',first=true,unsubs=[],pcs={},online={};
 const boot=()=>{
   if(firebaseConfig.apiKey==='BURAYA'){gate('Firebase ayarı eksik','index.html içindeki firebaseConfig alanını kendi projenin bilgileriyle doldur.','—');return}
   app=initializeApp(firebaseConfig);auth=getAuth(app);db=getDatabase(app);
-  if(location.hash)gate('Masaya davetlisin','Google ile giriş yap, masaya yürü, otur.','Google ile devam et');
-  onAuthStateChanged(auth,u=>{
+  if(location.hash)gate('Masaya davetlisin','Google ile giriş yap. Masada kimse seni adınla tanımayacak.','Google ile devam et');
+  onAuthStateChanged(auth,async u=>{
     user=u;if(!u)return;
-    myName=(u.displayName||'Misafir').split(' ')[0].slice(0,14);
-    sid=u.uid.slice(0,6)+Math.random().toString(36).slice(2,6);
-    const pr=ref(db,'online/'+sid);set(pr,{uid:u.uid,name:myName,room:null});onDisconnect(pr).remove();
+    sid=rid(8);                                   // oturuma özel rastgele kimlik; Google kimliği listelere yazılmaz
+    let nk=null;try{nk=localStorage.getItem('masa_nick')}catch(e){}
+    $('nm').value=nk||('Anonim'+Math.floor(100+Math.random()*900));myName=$('nm').value;
+    const ow=ref(db,'owners/'+sid);await set(ow,u.uid);onDisconnect(ow).remove();   // sadece kurallar okur, istemciler okuyamaz
+    const pr=ref(db,'online/'+sid);set(pr,{name:myName,busy:false});onDisconnect(pr).remove();
     onValue(ref(db,'online'),sn=>{online=sn.val()||{};renderOnline()});
     onChildAdded(ref(db,'invites/'+sid),sn=>{const v=sn.val();remove(sn.ref);if(v)toast(v)});
-    join();
+    lobby();
   });
 };
 $('go').onclick=async()=>{
@@ -196,7 +227,8 @@ $('go').onclick=async()=>{
 
 async function join(){
   if(room)return;
-  room=(location.hash||'').slice(1)||('masa-'+Math.random().toString(36).slice(2,7));
+  myName=($('nm').value||'').trim().slice(0,16)||'Anonim';try{localStorage.setItem('masa_nick',myName)}catch(e){}
+  room=(location.hash||'').slice(1)||('masa-'+rid(5));
   history.replaceState(null,'','#'+room);first=true;
   let idx=-1;
   for(let n=0;n<10&&idx<0;n++){
@@ -207,8 +239,12 @@ async function join(){
   const sr=ref(db,`rooms/${room}/seats/${idx}`),mr=ref(db,`rooms/${room}/members/${sid}`);
   onDisconnect(sr).remove();onDisconnect(mr).remove();
   await set(mr,{name:myName,seat:idx,muted:false});
-  set(ref(db,`online/${sid}/room`),room);
-  gate('','','',false);$('link').textContent=location.href.split('#')[0]+'#'+room;
+  set(ref(db,'online/'+sid),{name:myName,busy:true});
+  let mt=meta;
+  if(mt){set(ref(db,`rooms/${room}/meta`),mt);if(!mt.priv)set(ref(db,`lobby/${room}`),{topic:mt.topic});meta=null}
+  else mt=(await get(ref(db,`rooms/${room}/meta`))).val()||{topic:'Serbest sohbet'};
+  topic=(mt.priv?'🔒 ':'')+mt.topic;
+  gate('','','',false);$('chat').hidden=matchMedia('(max-width:959px)').matches;addMsg('masa','Mesajlar sunucuda saklanmaz; sadece şu an masada olanlar görür.');$('link').textContent=location.href.split('#')[0]+'#'+room;
   document.title='Masa · '+room;micOn=true;$('mic').className='on';$('mic').textContent='Mikrofon açık';
   try{localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});meter(localStream,sid)}
   catch(e){localStream=null;$('mic').textContent='Mikrofon izni yok'}
@@ -233,9 +269,9 @@ async function leave(quiet){
   if(localStream)localStream.getTracks().forEach(t=>t.stop());localStream=null;meters={};
   const mr=ref(db,`rooms/${r}/members/${sid}`),sr=ref(db,`rooms/${r}/seats/${m.i}`);
   onDisconnect(mr).cancel();onDisconnect(sr).cancel();remove(mr);remove(sr);
-  set(ref(db,`online/${sid}/room`),null);
+  set(ref(db,'online/'+sid),{name:myName,busy:false});$('chat').hidden=true;$('msgs').textContent='';topic='';
   Object.values(P).forEach(p=>{if(p.sid!==sid||quiet){p.el.remove();p.gone=true;occ[p.i]=null;delete P[p.sid]}});
-  if(!quiet){unseat(m);setTimeout(()=>gate('Masadan kalktın','İstersen yeniden gel, sandalyen seni bekliyor.','Masaya otur'),2400)}
+  if(!quiet){unseat(m);setTimeout(()=>{history.replaceState(null,'',location.pathname);lobby()},2400)}
   status();
 }
 $('leave').onclick=()=>leave();
@@ -244,7 +280,7 @@ $('leave').onclick=()=>leave();
 const send=(to,type,data)=>push(ref(db,`signals/${room}/${to}`),{from:sid,type,data:JSON.stringify(data)});
 function peer(id,late){
   if(pcs[id])return pcs[id];
-  const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});pc.q=[];
+  const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});pc.q=[];pc.ondatachannel=e=>setupDC(id,e.channel);if(!late)setupDC(id,pc.createDataChannel('c'));
   if(!late){if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));else pc.addTransceiver('audio',{direction:'recvonly'})}
   pc.onicecandidate=e=>{if(e.candidate)send(id,'ice',e.candidate.toJSON())};
   pc.ontrack=e=>{
@@ -272,7 +308,7 @@ async function handle(v){
   }
 }
 function closePeer(id){
-  if(pcs[id]){pcs[id].close();delete pcs[id]}
+  if(pcs[id]){pcs[id].close();delete pcs[id]}delete dcs[id];
   const a=$('a_'+id);if(a)a.remove();delete meters[id];
 }
 
@@ -282,8 +318,8 @@ function renderOnline(){
   $('ol').textContent='Çevrimiçi ('+ids.length+')';L.textContent='';
   if(!ids.length){L.textContent='Şu an başka kimse çevrimiçi değil.';return}
   ids.forEach(id=>{
-    const v=online[id],r=mk('row'),n=document.createElement('span'),b=document.createElement('button'),same=room&&v.room===room;
-    n.textContent=v.name+(same?' · masanda':v.room?' · başka masada':'');
+    const v=online[id],r=mk('row'),n=document.createElement('span'),b=document.createElement('button'),same=!!P[id];
+    n.textContent=v.name+(same?' · masanda':v.busy?' · başka masada':'');
     b.textContent=same?'Masanda':'Çağır';b.disabled=!!same||!room;
     b.onclick=()=>{push(ref(db,'invites/'+id),{from:sid,name:myName,room});b.textContent='Gönderildi';b.disabled=true};
     r.append(n,b);L.append(r);
@@ -296,6 +332,47 @@ function toast(v){
   b.onclick=()=>{T.hidden=true};T.append(s,a,b);T.hidden=false;
 }
 $('ol').onclick=()=>{$('ol-list').hidden=!$('ol-list').hidden};
+
+/* ---------- lobi: konulu masalar, özel masa ---------- */
+let LB={},cnt={},lobbyOn=false;
+function lobby(){
+  const inv=!!location.hash;
+  gate(inv?'Masaya davetlisin':'Bir masa seç',inv?'Takma adını yaz, masaya otur.':'Konusu hoşuna giden masaya otur ya da kendi masanı kur. Adın görünmez, takma adın görünür.','Masaya otur');
+  $('nm').hidden=false;$('go').hidden=!inv;$('lobby').hidden=inv;
+  if(inv||lobbyOn)return;lobbyOn=true;
+  onValue(ref(db,'lobby'),sn=>{LB=sn.val()||{};
+    for(const id in LB)if(!(id in cnt)){cnt[id]=0;onValue(ref(db,`rooms/${id}/seats`),s=>{cnt[id]=s.size;renderTables()})}
+    renderTables()});
+}
+function renderTables(){
+  const L=$('tl'),ids=Object.keys(LB).filter(id=>cnt[id]>0&&cnt[id]<10);L.textContent='';
+  if(!ids.length){L.textContent='Şu an açık masa yok. İlkini sen kur.';return}
+  ids.forEach(id=>{const r=mk('row'),n=document.createElement('span'),b=document.createElement('button');
+    n.textContent='“'+LB[id].topic+'” · '+cnt[id]+'/10';b.textContent='Otur';
+    b.onclick=()=>{history.replaceState(null,'','#'+id);join()};r.append(n,b);L.append(r)});
+}
+$('mk').onclick=()=>{
+  const priv=$('pv').checked;
+  meta={topic:($('tp').value.trim().slice(0,60))||'Serbest sohbet',priv};
+  history.replaceState(null,'','#'+(priv?'ozel-'+rid(14):'masa-'+rid(5)));join();
+};
+
+/* ---------- sohbet: tarayıcıdan tarayıcıya (DataChannel), sunucuya yazılmaz ---------- */
+const dcs={};
+function setupDC(id,dc){dcs[id]=dc;dc.onmessage=e=>{try{const m=JSON.parse(e.data);addMsg(String(m.n).slice(0,16),String(m.t).slice(0,300))}catch(x){}}}
+function addMsg(n,t){const d=mk('m'),b=document.createElement('b');b.textContent=n+': ';d.append(b,document.createTextNode(t));$('msgs').append(d);$('msgs').scrollTop=1e9}
+function sendMsg(){const t=$('ci').value.trim();if(!t)return;$('ci').value='';const s=JSON.stringify({n:myName,t});Object.values(dcs).forEach(d=>{if(d.readyState==='open')d.send(s)});addMsg(myName+' (sen)',t)}
+$('cs').onclick=sendMsg;$('ci').onkeydown=e=>{if(e.key==='Enter')sendMsg()};
+$('ct').onclick=()=>{$('chat').hidden=!$('chat').hidden};
+
+/* ---------- Pascal ---------- */
+(function(){
+  const base=["...........k..k.","..........kkkkkk","k.........kykkyk","k..gggggggggkkkk","kk.kkkkkkkkkkkk.",".kkkkkkkkkkkkk..","..kkkkkkkkkkkk.."];
+  const F=[base.concat(["..kk..kk..kk.kk.",".kk....kk..kk..k"]),base.concat(["...kk.kk...kkk..","...kk..kk..kk..."])];
+  const pal={k:'#1d1d24',g:'#3d3d4a',y:'#f0b43c'},c=$('cv').getContext('2d');let f=0;
+  const draw=()=>{c.clearRect(0,0,16,9);F[f].forEach((row,y)=>[...row].forEach((ch,x)=>{if(pal[ch]){c.fillStyle=pal[ch];c.fillRect(x,y,1,1)}}));f^=1};
+  draw();setInterval(draw,200);
+})();
 
 /* ---------- mikrofon / link ---------- */
 $('mic').onclick=()=>{
