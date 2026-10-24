@@ -173,6 +173,7 @@ input[type=checkbox]{width:auto;vertical-align:middle}
 #mres{display:flex;flex-direction:column;gap:2px}
 #mpb button{padding:5px 10px;font-size:11px}
 #mmsg{font-size:11px;color:#ffb4c0}
+#mhint{font-size:11px;line-height:1.5;color:var(--dim)}
 #mnow.on::before{content:"♪ ";color:var(--glow)}
 </style>
 </head>
@@ -209,11 +210,17 @@ SOFTWARE.</pre>
 <button class="g" id="lx">Kapat</button>
 </div></div>
 <aside id="rp" hidden><div class="ph">AÇIK MASALAR<span id="rc"></span></div><div id="rl"></div>
-<div id="mp" hidden><div class="ph">MÜZİK<span id="mpS"> · Spotify</span></div><div id="mpb">
-<div id="mnow">Şu an çalan şarkı yok.</div>
-<div id="mfr"></div>
-<div id="mhost" hidden><div class="sr"><input id="msq" maxlength="120" placeholder="Şarkı ara ya da Spotify linki yapıştır" aria-label="Şarkı ara"><button id="msb">Ara</button></div><div id="mres"></div><button id="mpp" hidden>Duraklat</button></div>
-<button id="mcon">Spotify hesabını bağla</button>
+<div id="mp" hidden><div class="ph">MÜZİK<span id="mpS"></span></div><div id="mpb">
+<div id="mnow">Şu an müzik yok.</div>
+<div id="mhost" hidden>
+<button id="mtab">Sekme / ekran sesini paylaş</button>
+<button id="mfile">Dosyadan çal</button>
+<input type="file" id="mfi" accept="audio/*" hidden>
+<button id="mpp" hidden>Duraklat</button>
+<button id="mstop" hidden>Müziği durdur</button>
+<div id="mhint">Spotify, YouTube gibi bir müzik sekmesini aç, “Sekme / ekran sesini paylaş”a bas, o sekmeyi seç ve “Sekme sesini de paylaş” kutusunu işaretle. Masadaki herkes aynı sesi aynı anda duyar. Hoparlör yerine kulaklık kullan, yoksa mikrofon müziği geri yollar.</div>
+</div>
+<button id="mmute" hidden>Müziği sessize al</button>
 <div id="mmsg"></div>
 </div></div></aside>
 <aside id="chat" hidden><div id="msgs"></div><div class="cw"><select id="cto" aria-label="Alıcı"><option value="">Herkese</option></select></div><div class="cin"><input id="ci" maxlength="300" placeholder="Mesaj yaz…" aria-label="Mesaj"><button id="cs">Gönder</button></div></aside>
@@ -343,7 +350,6 @@ const boot=()=>{
     onValue(ref(db,'online'),sn=>{online=sn.val()||{};renderOnline()});
     onChildAdded(ref(db,'invites/'+sid),sn=>{const v=sn.val();remove(sn.ref);if(v)toast(v)});
     onValue(ref(db,'pascal/pets'),s=>{$('pc').textContent=' ♥ '+(s.val()||0)});
-    onValue(ref(db,'.info/serverTimeOffset'),s=>{srvOff=s.val()||0});
     watchLobby();$('rp').hidden=mobile();
     lobby();
   });
@@ -386,12 +392,7 @@ async function join(){
     hostUI();status();
   }));
   unsubs.push(onValue(ref(db,`rooms/${R}/listeners`),sn=>{if(room!==R)return;lisN=sn.size;status()}));
-  unsubs.push(onValue(ref(db,`rooms/${R}/music`),sn=>{
-    if(room!==R)return;
-    const v=sn.val();music=(v&&/^[A-Za-z0-9]{22}$/.test(String(v.id))&&v.dur>0)?v:null;
-    if(music)music.uri='spotify:track:'+music.id;
-    mUI();syncPlay();
-  }));
+  unsubs.push(onValue(ref(db,`rooms/${R}/music`),sn=>{if(room!==R)return;music=sn.val()||null;mUI()}));
   unsubs.push(onChildAdded(ref(db,`rooms/${R}/requests`),sn=>{REQ[sn.key]=(sn.val()||{}).name||'Anonim';renderReqs()}));
   unsubs.push(onChildRemoved(ref(db,`rooms/${R}/requests`),sn=>{delete REQ[sn.key];renderReqs()}));
   unsubs.push(onChildAdded(ref(db,`signals/${R}/${sid}`),sn=>{const v=sn.val();remove(sn.ref);if(v)handle(v)}));
@@ -413,8 +414,8 @@ async function leave(quiet){
   if(!room)return;
   const r=room,m=P[sid];
   if(liveOn&&Object.keys(P).length<=1){remove(ref(db,`rooms/${r}/live`));if(LB[r])remove(ref(db,`lobby/${r}/live`))}
-  if(Object.keys(P).length<=1&&music)remove(ref(db,`rooms/${r}/music`));
-  room=null;music=null;syncPlay();mUI();renderTables();
+  if(mStream||(Object.keys(P).length<=1&&music))remove(ref(db,`rooms/${r}/music`));
+  musicStop(true);room=null;music=null;mUI();renderTables();
   unsubs.forEach(f=>f());unsubs=[];Object.keys(pcs).forEach(closePeer);mixOff();liveOn=false;lisN=0;$('live').hidden=true;$('lcopy').hidden=true;
   if(localStream)localStream.getTracks().forEach(t=>t.stop());localStream=null;meters={};
   const mr=ref(db,`rooms/${r}/members/${sid}`),sr=ref(db,`rooms/${r}/seats/${m.i}`);
@@ -441,8 +442,14 @@ function peer(id,late){
   if(!late){if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));else pc.addTransceiver('audio',{direction:'recvonly'})}
   pc.onicecandidate=e=>{if(e.candidate)send(id,'ice',e.candidate.toJSON())};
   pc.ontrack=e=>{
-    let a=$('a_'+id);if(!a){a=document.createElement('audio');a.id='a_'+id;a.autoplay=true;document.body.appendChild(a)}
-    a.srcObject=e.streams[0];meter(e.streams[0],id);mixAdd(id,e.streams[0]);
+    const st=e.streams[0];if(!st)return;
+    let a=$('a_'+id);
+    if(a&&a.srcObject&&a.srcObject.id!==st.id){      // aynı kişiden gelen ikinci akış = masa sahibinin müziği
+      let m=$('am_'+id);if(!m){m=document.createElement('audio');m.id='am_'+id;m.autoplay=true;m.muted=musicMuted;document.body.appendChild(m)}
+      m.srcObject=st;m.play().catch(()=>{});return;
+    }
+    if(!a){a=document.createElement('audio');a.id='a_'+id;a.autoplay=true;document.body.appendChild(a)}
+    a.srcObject=st;meter(st,id);mixAdd(id,st);
   };
   return pcs[id]=pc;
 }
@@ -457,10 +464,11 @@ async function handle(v){
   if(v.type==='lfull'){if(LS){LS.full=true;lclose();status()}return}
   if(v.type==='offer'){
     const pc=peer(v.from,true);await pc.setRemoteDescription(d);
-    if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+    if(localStream)localStream.getTracks().forEach(t=>{if(!pc.getSenders().some(s=>s.track===t))pc.addTrack(t,localStream)});
     for(const c of pc.q.splice(0))await pc.addIceCandidate(c);
     await pc.setLocalDescription(await pc.createAnswer());
     send(v.from,'answer',{type:pc.localDescription.type,sdp:pc.localDescription.sdp});
+    if(mStream){addMusicTo(v.from);setTimeout(()=>renego(v.from),400)}   // yeni gelene müziği de bağla
   }else{
     const pc=pcs[v.from];if(!pc)return;
     if(v.type==='answer'){await pc.setRemoteDescription(d);for(const c of pc.q.splice(0))await pc.addIceCandidate(c)}
@@ -469,7 +477,7 @@ async function handle(v){
 }
 function closePeer(id){
   mixDel(id);if(pcs[id]){pcs[id].close();delete pcs[id]}delete dcs[id];
-  const a=$('a_'+id);if(a)a.remove();delete meters[id];
+  const a=$('a_'+id);if(a)a.remove();const am=$('am_'+id);if(am)am.remove();delete meters[id];
 }
 
 /* ---------- yayın: masa sahibi sesi karıştırıp dinleyicilere gönderir ---------- */
@@ -479,6 +487,7 @@ function mixOn(){
   const a=ac();mixDest=a.createMediaStreamDestination();
   if(localStream){try{const s=a.createMediaStreamSource(localStream);s.connect(mixDest);mixSrc[sid]=s}catch(e){}}
   for(const id in pcs){const au=$('a_'+id);if(au&&au.srcObject)mixAdd(id,au.srcObject)}
+  if(mStream)mixAdd('music',mStream);
 }
 function mixAdd(id,stream){
   if(!mixDest||mixSrc[id])return;
@@ -727,113 +736,74 @@ $('cto').onchange=upPh;$('cs').onclick=sendMsg;$('ci').onkeydown=e=>{if(e.key===
 $('ct').onclick=()=>{$('chat').hidden=!$('chat').hidden;if(!$('chat').hidden&&mobile())$('rp').hidden=true};
 $('rt').onclick=()=>{$('rp').hidden=!$('rp').hidden;if(!$('rp').hidden&&mobile())$('chat').hidden=true};
 
-/* ---------- müzik: Spotify ----------
-   Masa sahibi Spotify'ı bağlar, şarkı seçer. Şarkı bilgisi (id + konum + zaman) Firebase'e yazılır;
-   masadaki herkesin tarayıcısı aynı noktadan çalar. Spotify sesi şifreli olduğu için "yayın karışımına"
-   katılamaz: her dinleyici kendi cihazında çalar (Premium'lu ve bağlıysa tam şarkı, değilse gömülü oynatıcı). */
-const SPOTIFY_CLIENT_ID='420e13ae9ea7494f970edad74b10aada';   // Spotify Developer Dashboard → Client ID (herkese açık bir değerdir)
-const SP_SCOPES='streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
-const SP_REDIR=location.origin+location.pathname;   // Spotify panelindeki Redirect URI ile birebir aynı olmalı
-let spTok=null,spRef=null,spExp=0,spPlayer=null,spDev=null,spReady=false,spLoading=false,spFail=false,music=null,srvOff=0,mEmbed='',spAct=false;
-const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+/* ---------- müzik: masa sahibi sesi paylaşır ----------
+   Müzik, masa sahibinin tarayıcısından masadaki herkese aynı WebRTC bağlantısıyla gider; böylece herkes
+   aynı sesi aynı anda duyar. Kaynak: bir sekmenin/ekranın sesi (Chrome/Edge masaüstü) ya da cihazdaki ses dosyası. */
+const SPOTIFY_CLIENT_ID='420e13ae9ea7494f970edad74b10aada';   // şu an kullanılmıyor, ileride Spotify entegrasyonu için saklı
+let music=null,mStream=null,mAudio=null,mCap=null,musicMuted=false;
 const mmsg=t=>{$('mmsg').textContent=t||''};
-const curPos=()=>!music?0:music.playing?music.pos+(Date.now()+srvOff-(music.at||Date.now()+srvOff)):music.pos;
-async function spLogin(){
-    const v=b64u(crypto.getRandomValues(new Uint8Array(48)));
-  const ch=b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));
-  try{localStorage.setItem('sp_v',v);localStorage.removeItem('sp_code')}catch(e){mmsg('Tarayıcı depolaması kapalı, Spotify bağlanamaz.');return}
-  const w=window.open('https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,response_type:'code',redirect_uri:SP_REDIR,scope:SP_SCOPES,code_challenge_method:'S256',code_challenge:ch}),'sp','width=480,height=720');
-  if(!w){mmsg('Açılır pencere engellendi, izin verip tekrar dene.');return}
-  mmsg('');spLoading=true;mUI();
+function addMusicTo(id){
+  const pc=pcs[id];if(!pc||!mStream)return;
+  mStream.getAudioTracks().forEach(t=>{if(!pc.getSenders().some(s=>s.track===t))pc.addTrack(t,mStream)});
 }
-addEventListener('storage',async e=>{
-  if(e.key!=='sp_code'||!e.newValue)return;
-  const code=e.newValue;try{localStorage.removeItem('sp_code')}catch(x){}
-  try{await spTokenReq({grant_type:'authorization_code',code,redirect_uri:SP_REDIR,code_verifier:localStorage.getItem('sp_v')});try{localStorage.removeItem('sp_v')}catch(x){}spInit()}
-  catch(x){mmsg('Spotify bağlantısı başarısız oldu.')}
-  spLoading=false;mUI();
-});
-async function spTokenReq(p){
-  const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,...p})});
-  const j=await r.json();if(!j.access_token)throw new Error('token');
-  spTok=j.access_token;if(j.refresh_token)spRef=j.refresh_token;spExp=Date.now()+j.expires_in*1000-60000;
+function renego(id){
+  const pc=pcs[id];if(!pc||!room)return;
+  if(pc.signalingState!=='stable'){setTimeout(()=>renego(id),600);return}
+  call(id);
 }
-async function spGet(){if(Date.now()>spExp&&spRef)await spTokenReq({grant_type:'refresh_token',refresh_token:spRef});return spTok}
-async function spApi(method,path,body){
-  const t=await spGet();
-  return fetch('https://api.spotify.com/v1/'+path,{method,headers:Object.assign({Authorization:'Bearer '+t},body?{'Content-Type':'application/json'}:{}),body:body?JSON.stringify(body):undefined});
+function musicStart(title,mode){
+  Object.keys(pcs).forEach(id=>{addMusicTo(id);renego(id)});
+  if(mixDest)mixAdd('music',mStream);
+  set(ref(db,`rooms/${room}/music`),{by:myName,title:String(title).slice(0,80),mode});
+  mmsg('');mUI();
 }
-function spInit(){
-  if(spPlayer)return;
-  const go=()=>{
-    spPlayer=new Spotify.Player({name:'Masa',getOAuthToken:async cb=>cb(await spGet()),volume:.8});
-    spPlayer.addListener('ready',({device_id})=>{spDev=device_id;spReady=true;spFail=false;mmsg(spAct?'':'Şarkının çalması için ekrana bir kez dokun.');mUI();syncPlay()});
-    spPlayer.addListener('not_ready',()=>{spReady=false;mUI()});
-    spPlayer.addListener('account_error',()=>{spFail=true;spReady=false;mmsg('Tam şarkı için Spotify Premium gerekir. Gömülü oynatıcıdan dinleyebilirsin.');mUI()});
-    spPlayer.addListener('authentication_error',()=>{spReady=false;mmsg('Spotify oturumu geçersiz, yeniden bağla.');spTok=null;spRef=null;spPlayer=null;mUI()});
-    spPlayer.addListener('initialization_error',()=>{spFail=true;mmsg('Bu tarayıcı Spotify oynatıcısını desteklemiyor.');mUI()});
-    spPlayer.connect();mUI();
-  };
-  if(window.Spotify)go();
-  else{window.onSpotifyWebPlaybackSDKReady=go;const s=document.createElement('script');s.src='https://sdk.scdn.co/spotify-player.js';document.head.appendChild(s)}
-}
-document.addEventListener('click',()=>{if(spPlayer&&!spAct&&spPlayer.activateElement){spAct=true;try{spPlayer.activateElement()}catch(e){}if(spReady)mmsg('')}},true);
-async function syncPlay(){
-  if(!spReady||!spDev)return;
-  try{
-    if(room&&music&&music.playing&&curPos()<music.dur)await spApi('PUT','me/player/play?device_id='+spDev,{uris:[music.uri],position_ms:Math.max(0,Math.round(curPos()))});
-    else await spApi('PUT','me/player/pause?device_id='+spDev);
-  }catch(e){}
-}
-function mEmbedUpd(){
-  const box=$('mfr'),show=!!(room&&music&&!spReady),id=show?music.id:'';
-  box.style.display=show?'block':'none';
-  if(id===mEmbed)return;
-  mEmbed=id;box.textContent='';
-  if(id){const f=document.createElement('iframe');f.src='https://open.spotify.com/embed/track/'+encodeURIComponent(id)+'?theme=0';f.allow='autoplay; encrypted-media';f.loading='lazy';f.title='Spotify oynatıcı';box.append(f)}
+function musicStop(quiet){
+  if(!mStream&&!mCap&&!mAudio)return;
+  const st=mStream;mStream=null;
+  if(st)for(const id in pcs){const pc=pcs[id];pc.getSenders().forEach(s=>{if(s.track&&st.getTracks().includes(s.track))try{pc.removeTrack(s)}catch(e){}});if(!quiet)renego(id)}
+  mixDel('music');
+  if(mCap){mCap.getTracks().forEach(t=>{t.onended=null;t.stop()});mCap=null}
+  if(mAudio){mAudio.onended=null;mAudio.pause();URL.revokeObjectURL(mAudio.src);mAudio=null}
+  if(room&&!quiet)remove(ref(db,`rooms/${room}/music`));
+  mUI();
 }
 function mUI(){
   const inR=!!room,h=!!(inR&&P[sid]&&P[sid].host);
-  $('mp').hidden=!inR;if(!inR){mEmbedUpd();return}
+  $('mp').hidden=!inR;if(!inR)return;
   const n=$('mnow');n.textContent='';
   if(music){
-    n.className='on';const s=document.createElement('small');
-    s.textContent=(music.artist||'')+(music.playing?'':' · duraklatıldı')+(music.by?' · '+music.by+' açtı':'');
-    n.append(document.createTextNode(music.title||'Şarkı'),s);
-  }else{n.className='';n.textContent=h?'Şarkı ara, masadaki herkes birlikte dinlesin.':'Şu an çalan şarkı yok. Masa sahibi şarkı açınca burada görünür.'}
-  $('mhost').hidden=!(h&&spTok);
-  $('mpp').hidden=!(h&&music);$('mpp').textContent=music&&music.playing?'Duraklat':'Devam ettir';
-  $('mpS').textContent=spReady?' · bağlı ✓':' · Spotify';
-  const c=$('mcon');c.hidden=spReady||spFail&&!!spTok;
-  c.disabled=spLoading||!!spTok;
-  c.textContent=spTok?'Spotify başlatılıyor…':spLoading?'Açılan pencerede onayla…':h?'Şarkı seçmek için Spotify’ı bağla':'Tam şarkı için Spotify’ı bağla (Premium)';
-  mEmbedUpd();
+    n.className='on';const s=document.createElement('small');s.textContent=(music.by||'')+' paylaşıyor';
+    n.append(document.createTextNode(music.title||'Müzik'),s);
+  }else{n.className='';n.textContent=h?'Müzik paylaş: herkes aynı anda aynı sesi duyar.':'Şu an müzik yok. Masa sahibi müzik açınca burada çalar.'}
+  const sharing=!!mStream;
+  $('mhost').hidden=!h;
+  $('mtab').hidden=sharing||!(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia);
+  $('mfile').hidden=sharing;$('mstop').hidden=!sharing;$('mpp').hidden=!(sharing&&mAudio);
+  $('mmute').hidden=!(music&&!sharing);$('mmute').textContent=musicMuted?'Müziği aç':'Müziği sessize al';
 }
-async function msearch(){
-  const q=$('msq').value.trim();if(!q||!spTok)return;mmsg('');
-  const R=$('mres');R.textContent='Aranıyor…';
+$('mtab').onclick=async()=>{
   try{
-    const m=q.match(/track[\/:]([A-Za-z0-9]{22})/);let items;
-    if(m){const r=await spApi('GET','tracks/'+m[1]);if(!r.ok)throw 0;items=[await r.json()]}
-    else{const r=await spApi('GET','search?type=track&limit=6&q='+encodeURIComponent(q));if(!r.ok)throw 0;items=(await r.json()).tracks.items}
-    R.textContent='';if(!items.length){R.textContent='Sonuç yok.';return}
-    items.forEach(t=>{
-      const r=mk('row'),s=document.createElement('span'),b=document.createElement('button');
-      s.textContent=t.name+' · '+t.artists.map(a=>a.name).join(', ');s.title=s.textContent;b.textContent='Çal';b.onclick=()=>mplay(t);r.append(s,b);R.append(r);
-    });
-  }catch(e){R.textContent='';mmsg('Arama başarısız oldu.')}
-}
-function mplay(t){
-  if(!room||!(P[sid]&&P[sid].host))return;
-  set(ref(db,`rooms/${room}/music`),{id:t.id,title:String(t.name).slice(0,80),artist:t.artists.map(a=>a.name).join(', ').slice(0,80),dur:t.duration_ms,pos:0,at:serverTimestamp(),playing:true,by:myName});
-  $('mres').textContent='';$('msq').value='';
-}
-$('mpp').onclick=()=>{
-  if(!music||!room||!(P[sid]&&P[sid].host))return;
-  let pos=Math.min(music.dur,Math.round(curPos()));if(!music.playing&&pos>=music.dur-500)pos=0;
-  set(ref(db,`rooms/${room}/music`),{id:music.id,title:music.title,artist:music.artist,dur:music.dur,by:music.by||'',pos,at:serverTimestamp(),playing:!music.playing});
+    const d=await navigator.mediaDevices.getDisplayMedia({video:true,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    const at=d.getAudioTracks();
+    if(!at.length){d.getTracks().forEach(t=>t.stop());mmsg('Ses paylaşılmadı. Pencerede bir Chrome/Edge sekmesi seçip “Sekme sesini de paylaş” kutusunu işaretle.');return}
+    musicStop(true);mCap=d;mStream=new MediaStream(at);
+    at[0].onended=()=>musicStop();d.getVideoTracks().forEach(t=>{t.onended=()=>musicStop()});
+    musicStart('Sekme sesi','tab');
+  }catch(e){mmsg('Paylaşım başlatılamadı veya iptal edildi.')}
 };
-$('mcon').onclick=spLogin;$('msb').onclick=msearch;$('msq').onkeydown=e=>{if(e.key==='Enter')msearch()};
+$('mfile').onclick=()=>$('mfi').click();
+$('mfi').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f||!room)return;
+  const el=new Audio(URL.createObjectURL(f)),cap=el.captureStream||el.mozCaptureStream;
+  if(!cap){mmsg('Bu tarayıcı dosyadan paylaşmayı desteklemiyor.');return}
+  try{await el.play()}catch(x){mmsg('Dosya çalınamadı.');return}
+  musicStop(true);mAudio=el;mStream=new MediaStream(cap.call(el).getAudioTracks());
+  el.onended=()=>musicStop();
+  $('mpp').textContent='Duraklat';musicStart(f.name.replace(/\.[^.]+$/,''),'file');
+};
+$('mpp').onclick=()=>{if(!mAudio)return;if(mAudio.paused){mAudio.play();$('mpp').textContent='Duraklat'}else{mAudio.pause();$('mpp').textContent='Devam ettir'}};
+$('mstop').onclick=()=>musicStop();
+$('mmute').onclick=()=>{musicMuted=!musicMuted;document.querySelectorAll('audio[id^=am_]').forEach(a=>{a.muted=musicMuted});mUI()};
 
 /* ---------- Pascal ---------- */
 (function(){
@@ -954,14 +924,7 @@ $('lx').onclick=()=>{$('lic').hidden=true};$('lic').onclick=e=>{if(e.target===$(
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('lic').hidden=true});
 {const u=$('ui'),set=()=>document.documentElement.style.setProperty('--uih',u.offsetHeight+'px');
  if(window.ResizeObserver)new ResizeObserver(set).observe(u);addEventListener('resize',set);set()}
-const SPQ=new URLSearchParams(location.search);
-if(SPQ.has('code')||SPQ.has('error')){
-  // Spotify yetkilendirme penceresi: kodu ana pencereye ilet ve kapan
-  try{if(SPQ.get('code'))localStorage.setItem('sp_code',SPQ.get('code'))}catch(e){}
-  const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;z-index:999;background:#07070a;color:#e9e6df;display:flex;align-items:center;justify-content:center;font-family:monospace;padding:24px;text-align:center';
-  o.textContent=SPQ.get('code')?'Spotify bağlandı, bu pencere kapanıyor…':'Spotify bağlantısı iptal edildi. Pencereyi kapatabilirsin.';
-  document.body.append(o);setTimeout(()=>window.close(),400);
-}else boot();
+boot();
 </script>
 </body>
 </html>
