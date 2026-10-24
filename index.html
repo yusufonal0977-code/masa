@@ -73,6 +73,13 @@ button.on{background:var(--ink);color:#0a0a0c;border-color:var(--ink)}
 input{font:inherit;background:#101014;color:var(--ink);border:1px solid #34343c;border-radius:8px;padding:3cqw 4cqw;width:min(64cqw,300px);text-align:center}
 .g{background:var(--ink);color:#0a0a0c;border-color:var(--ink);font-weight:700}
 @media (prefers-reduced-motion:reduce){.candle,.walk .legs i,.walk .head,.walk .body{animation:none}}
+[hidden]{display:none!important}
+#ol-list{position:absolute;right:4cqw;bottom:26cqw;width:58cqw;max-height:40%;overflow:auto;background:#101014;border:1px solid #34343c;border-radius:12px;padding:2cqw;z-index:4;font-size:clamp(11px,2.8cqw,13px);color:var(--dim)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:2cqw;padding:1.2cqw 0}
+.row span{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row button{padding:1.4cqw 3cqw}
+button:disabled{opacity:.5;cursor:default}
+#toast{position:absolute;left:4cqw;right:4cqw;top:2%;display:flex;gap:2cqw;align-items:center;flex-wrap:wrap;justify-content:center;background:#14141a;border:1px solid var(--glow);border-radius:14px;padding:3cqw;z-index:7;font-size:clamp(11px,3cqw,13px)}
 </style>
 </head>
 <body>
@@ -86,150 +93,221 @@ input{font:inherit;background:#101014;color:var(--ink);border:1px solid #34343c;
     <div class="link" id="link"></div>
     <button id="mic" class="on">Mikrofon açık</button>
     <button id="copy">Linki kopyala</button>
-    <button id="add">Misafir ekle (demo)</button>
-    <button id="kick">Misafir kalksın (demo)</button>
+    <button id="ol">Çevrimiçi (0)</button>
     <button id="leave">Masadan kalk</button>
   </div>
+  <div id="ol-list" hidden></div><div id="toast" hidden></div>
   <div class="gate" id="gate">
     <h2 id="gt">Masana otur</h2>
     <p id="gp">Masayı kur, linki arkadaşlarına gönder. Linke tıklayan herkes masaya yürüyüp oturur, sen başköşede kalırsın.</p>
-    <input id="nm" placeholder="Adın" maxlength="14" aria-label="Adın">
-    <button class="g" id="go">Google ile devam et (demo)</button>
+    <button class="g" id="go">Google ile devam et</button>
   </div>
 </div>
-<script>
-(function(){
-var $=function(i){return document.getElementById(i)};
-var TOP=26,H=42;
-function half(y){return 7+15*(y-TOP)/H}
-function K(y){return .6+(y-24)*.0105}
-function mk(c,cl){var d=document.createElement('div');d.className=cl;return d}
-// seats: head, 4 rows of left/right, foot
-var S=[{x:50,y:24,c:'H'}];
-[33,42,51,60].forEach(function(y){var o=half(y)+6*K(y);S.push({x:50-o,y:y,c:'L'},{x:50+o,y:y,c:'R'})});
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getDatabase,ref,set,remove,push,onValue,onChildAdded,onDisconnect,runTransaction} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+// ===== BURAYI DOLDUR: Firebase Console > Proje ayarları > Web uygulaması > firebaseConfig =====
+const firebaseConfig={apiKey:"BURAYA",authDomain:"BURAYA.firebaseapp.com",databaseURL:"https://BURAYA-default-rtdb.firebaseio.com",projectId:"BURAYA",appId:"BURAYA"};
+// ================================================================================================
+
+const $=i=>document.getElementById(i);
+const mk=cl=>{const d=document.createElement('div');d.className=cl;return d};
+const TOP=26,H=42,half=y=>7+15*(y-TOP)/H,K=y=>.6+(y-24)*.0105;
+const S=[{x:50,y:24,c:'H'}];
+[33,42,51,60].forEach(y=>{const o=half(y)+6*K(y);S.push({x:50-o,y,c:'L'},{x:50+o,y,c:'R'})});
 S.push({x:50,y:71,c:'F'});
-S.forEach(function(s,i){
+S.forEach((s,i)=>{
   s.k=K(s.y);s.dir=s.c==='R'?1:-1;
   s.spot=(s.c==='H'||s.c==='F')?50-16*s.k:s.x+s.dir*14*s.k;
   s.out=s.c==='R'?110:-10;
-  var c=mk(0,'chair '+s.c);c.style.left=s.x+'%';c.style.top=s.y+'%';c.style.setProperty('--k',s.k);
+  const c=mk('chair '+s.c);c.style.left=s.x+'%';c.style.top=s.y+'%';c.style.setProperty('--k',s.k);
   $('chairs').appendChild(c);s.ch=c;
-  if(i>0&&i<9){var g=mk(0,'glass');g.style.left=(50+(s.c==='L'?-1:1)*(half(s.y)-3.5))+'%';g.style.top=(s.y+1)+'%';g.style.setProperty('--k',s.k);$('glasses').appendChild(g)}
+  if(i>0&&i<9){const g=mk('glass');g.style.left=(50+(s.c==='L'?-1:1)*(half(s.y)-3.5))+'%';g.style.top=(s.y+1)+'%';g.style.setProperty('--k',s.k);$('glasses').appendChild(g)}
 });
-var NAMES=['Deniz','Elif','Kaan','Zeynep','Mert','Selin','Burak','Ada','Can'];
-var people=[],occ=[],me=null,started=false,hostDone=false,roomId=(location.hash||'').slice(1),isGuest=!!roomId,ctx=null,an=null,buf=null,micOn=true,looping=false;
-if(!roomId)roomId='masa-'+Math.random().toString(36).slice(2,7);
 
-function seat(name,o){
-  var idx=-1;for(var j=0;j<10;j++){if(!occ[j]){idx=j;break}}
-  if(idx<0)return null;
-  var s=S[idx],el=mk(0,'p '+s.c+(o.me?' me':''));
+/* ---------- sahne: otur / kalk ---------- */
+const occ=[],P={};
+function seat(sid,name,idx,o){
+  const s=S[idx],el=mk('p '+s.c+(o.me?' me':''));
   el.style.setProperty('--k',s.k);el.style.top=s.y+'%';
-  el.innerHTML='<div class="fig">'+(o.host?'<div class="crown">♛</div>':'')+'<div class="body"></div><div class="arm"></div><div class="legs"><i></i><i></i></div><div class="head"></div></div><div class="name"></div>';
+  el.innerHTML='<div class="fig">'+(idx===0?'<div class="crown">♛</div>':'')+'<div class="body"></div><div class="arm"></div><div class="legs"><i></i><i></i></div><div class="head"></div></div><div class="name"></div>';
   el.querySelector('.name').textContent=name+(o.me?' (sen)':'');
-  var p={el:el,name:name,me:!!o.me,fake:!o.me,i:idx,gone:false};
-  occ[idx]=p;people.push(p);
+  const p={el,sid,name,i:idx,gone:false};occ[idx]=p;P[sid]=p;
   if(o.instant){el.style.left=s.x+'%';$('seats').appendChild(el)}
   else{
     el.classList.add('stand','walk');el.style.left=s.out+'%';$('seats').appendChild(el);
-    s.ch.classList.add('out');void el.offsetWidth;
-    el.style.left=s.spot+'%';              // yürüyerek sandalyenin yanına gel
-    setTimeout(function(){
-      if(p.gone)return;
-      el.classList.remove('walk','stand');el.style.left=s.x+'%';   // otur
-      setTimeout(function(){if(!p.gone)s.ch.classList.remove('out')},350);
-    },1850);
+    s.ch.classList.add('out');void el.offsetWidth;el.style.left=s.spot+'%';
+    setTimeout(()=>{if(p.gone)return;el.classList.remove('walk','stand');el.style.left=s.x+'%';
+      setTimeout(()=>{if(!p.gone)s.ch.classList.remove('out')},350)},1850);
   }
   status();return p;
 }
 function unseat(p){
-  var s=S[p.i];occ[p.i]=null;p.gone=true;
-  people.splice(people.indexOf(p),1);
-  var el=p.el;el.classList.remove('talk');
-  s.ch.classList.add('out');                       // sandalye geri itilir
-  el.classList.remove('walk');el.classList.add('stand');el.style.left=s.spot+'%';   // ayağa kalk
-  setTimeout(function(){el.classList.add('walk');el.style.left=s.out+'%'},650);      // yürüyüp git
-  setTimeout(function(){el.remove()},2600);
-  status();
+  const s=S[p.i];if(occ[p.i]===p)occ[p.i]=null;delete P[p.sid];p.gone=true;
+  const el=p.el;el.classList.remove('talk');s.ch.classList.add('out');
+  el.classList.remove('walk');el.classList.add('stand');el.style.left=s.spot+'%';
+  setTimeout(()=>{el.classList.add('walk');el.style.left=s.out+'%'},650);
+  setTimeout(()=>el.remove(),2600);status();
 }
 function status(){
-  $('sub').style.display='block';
-  $('sub').textContent=people.length+' / 10 kişi masada';
-  $('title').textContent=people.length<10?'MASA KURULDU. '+(10-people.length)+' SANDALYE BOŞ.':'MASA DOLDU.';
+  const n=Object.keys(P).length;$('sub').style.display='block';
+  $('sub').textContent=n+' / 10 kişi masada';
+  $('title').textContent=n<10?'MASA KURULDU. '+(10-n)+' SANDALYE BOŞ.':'MASA DOLDU.';
 }
-function start(){
-  var n=($('nm').value||'').trim()||'Misafir';
-  $('gate').style.display='none';$('ui').style.display='flex';
-  $('link').textContent=location.href.split('#')[0]+'#'+roomId;
-  if(!started){started=true;
-    if(isGuest){seat('Ayşe',{instant:true,host:true});hostDone=true}
-  }
-  me=seat(n,{me:true,host:!hostDone});hostDone=true;
-  micOn=true;$('mic').className='on';$('mic').textContent='Mikrofon açık';
-  mic();
-  document.title='Masa · '+roomId;
-}
-$('go').onclick=start;
-$('nm').addEventListener('keydown',function(e){if(e.key==='Enter')start()});
-if(isGuest){$('gt').textContent='Masaya davetlisin';$('gp').textContent='Ayşe seni masasına çağırdı. Adını yaz, yürü, otur.';}
+function gate(t,p,b,show=true){$('gt').textContent=t;$('gp').textContent=p;$('go').textContent=b;$('gate').style.display=show?'flex':'none';$('ui').style.display=show?'none':'flex'}
 
-// demo guests
-$('add').onclick=function(){
-  var used=people.map(function(p){return p.name}),n=NAMES.filter(function(x){return used.indexOf(x)<0})[0]||'Konuk';
-  seat(n,{});
-};
-$('kick').onclick=function(){
-  var f=people.filter(function(p){return p.fake});
-  if(f.length)unseat(f[Math.floor(Math.random()*f.length)]);
-};
-$('leave').onclick=function(){
-  if(!me)return;
-  var m=me;me=null;stopMic();unseat(m);
-  setTimeout(function(){
-    $('ui').style.display='none';$('gate').style.display='flex';
-    $('gt').textContent='Masadan kalktın';$('gp').textContent='İstersen yeniden gel, sandalyen seni bekliyor.';
-  },2400);
-};
-$('copy').onclick=function(){
-  var t=$('link').textContent;
-  try{navigator.clipboard.writeText(t).then(function(){$('copy').textContent='Kopyalandı'})}catch(e){$('copy').textContent='Linki elle kopyala'}
-  setTimeout(function(){$('copy').textContent='Linki kopyala'},1600);
-};
-
-// microphone: real level meter if allowed
-function mic(){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return;
-  navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
-    ctx=new (window.AudioContext||window.webkitAudioContext)();
-    var src=ctx.createMediaStreamSource(st);an=ctx.createAnalyser();an.fftSize=512;src.connect(an);buf=new Uint8Array(an.fftSize);
-    st.getAudioTracks().forEach(function(t){t.enabled=micOn});
-    $('mic').onclick=toggle;window._st=st;
-    if(!looping){looping=true;loop()}
-  }).catch(function(){$('mic').textContent='Mikrofon izni yok';});
+/* ---------- ses seviyesi (konuşan kişinin başı parlar) ---------- */
+let ctx,meters={};
+function meter(stream,id){
+  ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();ctx.resume();
+  const an=ctx.createAnalyser();an.fftSize=512;ctx.createMediaStreamSource(stream).connect(an);
+  meters[id]={an,buf:new Uint8Array(512)};
 }
-function stopMic(){
-  if(window._st){window._st.getTracks().forEach(function(t){t.stop()});window._st=null}
-  if(ctx){try{ctx.close()}catch(e){}ctx=null}
-  an=null;
-}
-function toggle(){
-  micOn=!micOn;$('mic').className=micOn?'on':'';$('mic').textContent=micOn?'Mikrofon açık':'Mikrofon kapalı';
-  if(window._st)window._st.getAudioTracks().forEach(function(t){t.enabled=micOn});
-  if(me){me.el.classList.toggle('muted',!micOn)}
-}
-$('mic').onclick=toggle;
-function loop(){
-  if(an&&me){an.getByteTimeDomainData(buf);var m=0;for(var i=0;i<buf.length;i++){m=Math.max(m,Math.abs(buf[i]-128))}
-    me.el.classList.toggle('talk',micOn&&m>14)}
+let micOn=true,localStream=null,sid,room=null;
+(function loop(){
+  for(const id in meters){const m=meters[id];m.an.getByteTimeDomainData(m.buf);let x=0;for(const v of m.buf)x=Math.max(x,Math.abs(v-128));
+    const p=P[id];if(p)p.el.classList.toggle('talk',x>14&&(id!==sid||micOn))}
   requestAnimationFrame(loop);
-}
-// fake guests take turns "speaking" in the demo
-setInterval(function(){
-  var f=people.filter(function(p){return p.fake});
-  f.forEach(function(p){p.el.classList.remove('talk')});
-  if(f.length&&Math.random()<.75)f[Math.floor(Math.random()*f.length)].el.classList.add('talk');
-},2200);
 })();
+
+/* ---------- Firebase ---------- */
+let app,auth,db,user,myName='Misafir',first=true,unsubs=[],pcs={},online={};
+const boot=()=>{
+  if(firebaseConfig.apiKey==='BURAYA'){gate('Firebase ayarı eksik','index.html içindeki firebaseConfig alanını kendi projenin bilgileriyle doldur.','—');return}
+  app=initializeApp(firebaseConfig);auth=getAuth(app);db=getDatabase(app);
+  if(location.hash)gate('Masaya davetlisin','Google ile giriş yap, masaya yürü, otur.','Google ile devam et');
+  onAuthStateChanged(auth,u=>{
+    user=u;if(!u)return;
+    myName=(u.displayName||'Misafir').split(' ')[0].slice(0,14);
+    sid=u.uid.slice(0,6)+Math.random().toString(36).slice(2,6);
+    const pr=ref(db,'online/'+sid);set(pr,{uid:u.uid,name:myName,room:null});onDisconnect(pr).remove();
+    onValue(ref(db,'online'),sn=>{online=sn.val()||{};renderOnline()});
+    onChildAdded(ref(db,'invites/'+sid),sn=>{const v=sn.val();remove(sn.ref);if(v)toast(v)});
+    join();
+  });
+};
+$('go').onclick=async()=>{
+  if(!db)return;
+  if(!user){try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(e){$('gp').textContent='Giriş hatası: '+(e.code||e.message)}}
+  else join();
+};
+
+async function join(){
+  if(room)return;
+  room=(location.hash||'').slice(1)||('masa-'+Math.random().toString(36).slice(2,7));
+  history.replaceState(null,'','#'+room);first=true;
+  let idx=-1;
+  for(let n=0;n<10&&idx<0;n++){
+    const r=await runTransaction(ref(db,`rooms/${room}/seats/${n}`),c=>c===null?sid:undefined);
+    if(r.committed)idx=n;
+  }
+  if(idx<0){room=null;gate('Masa dolu','Bu masada boş sandalye kalmadı.','Yeni masa kur');history.replaceState(null,'',location.pathname);return}
+  const sr=ref(db,`rooms/${room}/seats/${idx}`),mr=ref(db,`rooms/${room}/members/${sid}`);
+  onDisconnect(sr).remove();onDisconnect(mr).remove();
+  await set(mr,{name:myName,seat:idx,muted:false});
+  set(ref(db,`online/${sid}/room`),room);
+  gate('','','',false);$('link').textContent=location.href.split('#')[0]+'#'+room;
+  document.title='Masa · '+room;micOn=true;$('mic').className='on';$('mic').textContent='Mikrofon açık';
+  try{localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});meter(localStream,sid)}
+  catch(e){localStream=null;$('mic').textContent='Mikrofon izni yok'}
+  const R=room;
+  unsubs.push(onChildAdded(ref(db,`signals/${R}/${sid}`),sn=>{const v=sn.val();remove(sn.ref);if(v)handle(v)}));
+  unsubs.push(onValue(ref(db,`rooms/${R}/members`),sn=>{
+    if(room!==R)return;
+    const m=sn.val()||{};
+    for(const id in m)if(!P[id]){
+      seat(id,m[id].name,m[id].seat,{me:id===sid,instant:first&&id!==sid});
+      if(first&&id!==sid)call(id);       // yeni gelen, masadakilere teklif gönderir
+    }
+    for(const id in P)if(!m[id]){unseat(P[id]);closePeer(id)}
+    for(const id in P)P[id].el.classList.toggle('muted',!!(m[id]&&m[id].muted));
+    first=false;
+  }));
+}
+async function leave(quiet){
+  if(!room)return;
+  const r=room,m=P[sid];room=null;
+  unsubs.forEach(f=>f());unsubs=[];Object.keys(pcs).forEach(closePeer);
+  if(localStream)localStream.getTracks().forEach(t=>t.stop());localStream=null;meters={};
+  const mr=ref(db,`rooms/${r}/members/${sid}`),sr=ref(db,`rooms/${r}/seats/${m.i}`);
+  onDisconnect(mr).cancel();onDisconnect(sr).cancel();remove(mr);remove(sr);
+  set(ref(db,`online/${sid}/room`),null);
+  Object.values(P).forEach(p=>{if(p.sid!==sid||quiet){p.el.remove();p.gone=true;occ[p.i]=null;delete P[p.sid]}});
+  if(!quiet){unseat(m);setTimeout(()=>gate('Masadan kalktın','İstersen yeniden gel, sandalyen seni bekliyor.','Masaya otur'),2400)}
+  status();
+}
+$('leave').onclick=()=>leave();
+
+/* ---------- WebRTC (ses) — sinyalleşme Firebase üzerinden ---------- */
+const send=(to,type,data)=>push(ref(db,`signals/${room}/${to}`),{from:sid,type,data:JSON.stringify(data)});
+function peer(id,late){
+  if(pcs[id])return pcs[id];
+  const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});pc.q=[];
+  if(!late){if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));else pc.addTransceiver('audio',{direction:'recvonly'})}
+  pc.onicecandidate=e=>{if(e.candidate)send(id,'ice',e.candidate.toJSON())};
+  pc.ontrack=e=>{
+    let a=$('a_'+id);if(!a){a=document.createElement('audio');a.id='a_'+id;a.autoplay=true;document.body.appendChild(a)}
+    a.srcObject=e.streams[0];meter(e.streams[0],id);
+  };
+  return pcs[id]=pc;
+}
+async function call(id){
+  const pc=peer(id);await pc.setLocalDescription(await pc.createOffer());
+  send(id,'offer',{type:pc.localDescription.type,sdp:pc.localDescription.sdp});
+}
+async function handle(v){
+  const d=JSON.parse(v.data);
+  if(v.type==='offer'){
+    const pc=peer(v.from,true);await pc.setRemoteDescription(d);
+    if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+    for(const c of pc.q.splice(0))await pc.addIceCandidate(c);
+    await pc.setLocalDescription(await pc.createAnswer());
+    send(v.from,'answer',{type:pc.localDescription.type,sdp:pc.localDescription.sdp});
+  }else{
+    const pc=pcs[v.from];if(!pc)return;
+    if(v.type==='answer'){await pc.setRemoteDescription(d);for(const c of pc.q.splice(0))await pc.addIceCandidate(c)}
+    else if(pc.remoteDescription)await pc.addIceCandidate(d);else pc.q.push(d);
+  }
+}
+function closePeer(id){
+  if(pcs[id]){pcs[id].close();delete pcs[id]}
+  const a=$('a_'+id);if(a)a.remove();delete meters[id];
+}
+
+/* ---------- çevrimiçi listesi ve davet ---------- */
+function renderOnline(){
+  const ids=Object.keys(online).filter(k=>k!==sid),L=$('ol-list');
+  $('ol').textContent='Çevrimiçi ('+ids.length+')';L.textContent='';
+  if(!ids.length){L.textContent='Şu an başka kimse çevrimiçi değil.';return}
+  ids.forEach(id=>{
+    const v=online[id],r=mk('row'),n=document.createElement('span'),b=document.createElement('button'),same=room&&v.room===room;
+    n.textContent=v.name+(same?' · masanda':v.room?' · başka masada':'');
+    b.textContent=same?'Masanda':'Çağır';b.disabled=!!same||!room;
+    b.onclick=()=>{push(ref(db,'invites/'+id),{from:sid,name:myName,room});b.textContent='Gönderildi';b.disabled=true};
+    r.append(n,b);L.append(r);
+  });
+}
+function toast(v){
+  const T=$('toast'),s=document.createElement('span'),a=document.createElement('button'),b=document.createElement('button');
+  T.textContent='';s.textContent=v.name+' seni masasına çağırıyor';a.textContent='Otur';a.className='g';b.textContent='Yok say';
+  a.onclick=async()=>{T.hidden=true;if(room)await leave(true);history.replaceState(null,'','#'+v.room);join()};
+  b.onclick=()=>{T.hidden=true};T.append(s,a,b);T.hidden=false;
+}
+$('ol').onclick=()=>{$('ol-list').hidden=!$('ol-list').hidden};
+
+/* ---------- mikrofon / link ---------- */
+$('mic').onclick=()=>{
+  micOn=!micOn;$('mic').className=micOn?'on':'';$('mic').textContent=micOn?'Mikrofon açık':'Mikrofon kapalı';
+  if(localStream)localStream.getAudioTracks().forEach(t=>t.enabled=micOn);
+  if(room)set(ref(db,`rooms/${room}/members/${sid}/muted`),!micOn);
+};
+$('copy').onclick=()=>{
+  try{navigator.clipboard.writeText($('link').textContent).then(()=>{$('copy').textContent='Kopyalandı'})}catch(e){$('copy').textContent='Linki elle kopyala'}
+  setTimeout(()=>{$('copy').textContent='Linki kopyala'},1600);
+};
+boot();
 </script>
 </body>
 </html>
