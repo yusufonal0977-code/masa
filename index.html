@@ -157,8 +157,8 @@ input[type=checkbox]{width:auto;vertical-align:middle}
 #leave{grid-column:span 3;border-color:#7a3a3a;color:#ffb4b4}
 #leave.sure{background:#ff4a2e;border-color:#ff4a2e;color:#0a0a0c;font-weight:700}
 @media(min-width:700px){.ui.show{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.ui .link{display:block}.ui button{padding:8px 14px;font-size:13px}#leave{grid-column:auto}}
-#ol-list{bottom:190px}
-@media(max-width:1159px){#rp,#chat{bottom:165px}}
+#ol-list{bottom:calc(var(--uih,150px) + 10px)}
+@media(max-width:1159px){#rp,#chat{bottom:calc(var(--uih,150px) + 10px)}}
 /* müzik paneli */
 #rl{min-height:80px}
 #mp{flex:none;max-height:62%;overflow:auto;border-top:1px solid #2a2a32;display:flex;flex-direction:column}
@@ -226,11 +226,11 @@ SOFTWARE.</pre>
   <div id="glasses"></div><div id="chairs"></div><div id="seats"></div>
   <div class="ui" id="ui">
     <div class="link" id="link"></div>
-    <button id="mic" class="on">🎙 Açık</button>
-    <button id="ct">💬 Sohbet</button>
-    <button id="rt">🎵 Masa/Müzik</button>
-    <button id="copy">🔗 Link</button>
-    <button id="ol">👥 (0)</button>
+    <button id="mic" class="on">Mik. açık</button>
+    <button id="ct">Sohbet</button>
+    <button id="rt">Masa/Müzik</button>
+    <button id="copy">Link</button>
+    <button id="ol">Kişiler (0)</button>
     <button id="live" hidden>Yayına al</button>
     <button id="lcopy" hidden>Dinleme linki</button>
     <button id="leave">Masadan kalk</button>
@@ -375,9 +375,9 @@ async function join(){
   else mt=(await get(ref(db,`rooms/${room}/meta`))).val()||{topic:'Serbest sohbet'};
   topic=(mt.priv?'🔒 ':'')+mt.topic;
   gate('','','',false);renderTables();upPh();$('chat').hidden=matchMedia('(max-width:1159px)').matches;addMsg('masa','Mesajlar sunucuda saklanmaz; sadece şu an masada olanlar görür. Birine fısıldamak için alıcıyı seç ya da masadaki kişiye tıkla.');$('link').textContent=location.href.split('#')[0]+'#'+room;
-  document.title='Masa · '+room;micOn=true;$('leave').textContent='Masadan kalk';$('mic').className='on';$('mic').textContent='🎙 Açık';
+  document.title='Masa · '+room;micOn=true;$('leave').textContent='Masadan kalk';$('mic').className='on';$('mic').textContent='Mik. açık';
   try{localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});meter(localStream,sid)}
-  catch(e){localStream=null;$('mic').textContent='🎙 İzin yok'}
+  catch(e){localStream=null;$('mic').textContent='Mik. izni yok'}
   const R=room;
   unsubs.push(onValue(ref(db,`rooms/${R}/live`),sn=>{
     if(room!==R)return;
@@ -568,7 +568,7 @@ async function listen(R){
   const lr=ref(db,`rooms/${R}/listeners/${sid}`);await set(lr,{name:myName});onDisconnect(lr).remove();
   set(ref(db,'online/'+sid),{name:myName,busy:true});
   gate('','','',false);document.body.classList.add('lis');$('chat').hidden=true;
-  $('leave').textContent='Dinlemeyi bırak';$('mic').className='on';$('mic').textContent='🔊 Açık';
+  $('leave').textContent='Dinlemeyi bırak';$('mic').className='on';$('mic').textContent='Ses açık';
   $('link').textContent=location.href.split('#')[0]+'#dinle/'+R;document.title='Masa · yayın · '+R;
   renderTables();status();
   LS.unsubs.push(onChildAdded(ref(db,`signals/${R}/${sid}`),sn=>{const v=sn.val();remove(sn.ref);if(v)handle(v)}));
@@ -615,7 +615,7 @@ async function goListen(id){
 /* ---------- çevrimiçi listesi ve davet ---------- */
 function renderOnline(){
   const ids=Object.keys(online).filter(k=>k!==sid),L=$('ol-list');
-  $('ol').textContent='👥 ('+ids.length+')';L.textContent='';
+  $('ol').textContent='Kişiler ('+ids.length+')';L.textContent='';
   if(!ids.length){L.textContent='Şu an başka kimse çevrimiçi değil.';return}
   ids.forEach(id=>{
     const v=online[id],r=mk('row'),n=document.createElement('span'),b=document.createElement('button'),same=!!P[id];
@@ -938,20 +938,22 @@ function sit(t,closed){
 })();
 
 /* ---------- mikrofon / link ---------- */
-$('mic').onclick=()=>{if(LS){const a=LS.audio;if(a){a.muted=!a.muted;$('mic').className=a.muted?'':'on';$('mic').textContent=a.muted?'🔊 Kapalı':'🔊 Açık'}return}
-  micOn=!micOn;$('mic').className=micOn?'on':'';$('mic').textContent=micOn?'🎙 Açık':'🎙 Kapalı';
+$('mic').onclick=()=>{if(LS){const a=LS.audio;if(a){a.muted=!a.muted;$('mic').className=a.muted?'':'on';$('mic').textContent=a.muted?'Ses kapalı':'Ses açık'}return}
+  micOn=!micOn;$('mic').className=micOn?'on':'';$('mic').textContent=micOn?'Mik. açık':'Mik. kapalı';
   if(localStream)localStream.getAudioTracks().forEach(t=>t.enabled=micOn);
   if(room)set(ref(db,`rooms/${room}/members/${sid}/muted`),!micOn);
 };
 $('copy').onclick=()=>{
   try{navigator.clipboard.writeText($('link').textContent).then(()=>{$('copy').textContent='Kopyalandı'})}catch(e){$('copy').textContent='Elle kopyala'}
-  setTimeout(()=>{$('copy').textContent='🔗 Link'},1600);
+  setTimeout(()=>{$('copy').textContent='Link'},1600);
 };
 $('yr').textContent=$('yr2').textContent=new Date().getFullYear();
 const openLic=()=>{$('lic').hidden=false;$('lx').focus()};
 $('brand').onclick=openLic;$('brand').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openLic()}};
 $('lx').onclick=()=>{$('lic').hidden=true};$('lic').onclick=e=>{if(e.target===$('lic'))$('lic').hidden=true};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('lic').hidden=true});
+{const u=$('ui'),set=()=>document.documentElement.style.setProperty('--uih',u.offsetHeight+'px');
+ if(window.ResizeObserver)new ResizeObserver(set).observe(u);addEventListener('resize',set);set()}
 const SPQ=new URLSearchParams(location.search);
 if(SPQ.has('code')||SPQ.has('error')){
   // Spotify yetkilendirme penceresi: kodu ana pencereye ilet ve kapan
