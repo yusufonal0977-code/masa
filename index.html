@@ -10,7 +10,70 @@
 <meta property="og:description" content="Bir masa kur. Sesin yeter.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%AF%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css">
+<style>
+:root{--bg:#07070a;--ink:#e9e6df;--dim:#8a8780;--flame:#ff4a2e;--glow:#ffd9a0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:'Space Mono',ui-monospace,Menlo,monospace}
+body{display:flex;justify-content:center}
+.app{position:relative;width:min(100vw,520px);height:100%;overflow:hidden;container-type:inline-size}
+.lamp{position:absolute;left:50%;top:0;width:1px;height:11%;background:#333}
+.cone{position:absolute;left:50%;top:10%;width:96cqw;height:96cqw;transform:translateX(-50%);background:radial-gradient(closest-side,rgba(255,205,140,.22),transparent);pointer-events:none}
+.shade{position:absolute;left:50%;top:11%;width:9cqw;height:4cqw;transform:translateX(-50%);background:#2a2a30;border-radius:50% 50% 0 0/100% 100% 0 0;box-shadow:0 1px 10px var(--glow)}
+h1{position:absolute;top:3.5%;left:0;right:0;margin:0;text-align:center;font-size:clamp(13px,3.6cqw,17px);letter-spacing:.14em;font-weight:700;padding:0 6cqw;line-height:1.5}
+#sub{position:absolute;top:8.5%;left:0;right:0;text-align:center;color:var(--dim);font-size:clamp(11px,3cqw,14px);display:none}
+.table{position:absolute;left:50%;top:26%;width:44cqw;height:42%;transform:translateX(-50%);background:linear-gradient(#2a2a32,#121216);clip-path:polygon(34% 0,66% 0,100% 100%,0 100%)}
+.candle{position:absolute;left:50%;top:47%;width:2.2cqw;height:5cqw;transform:translate(-50%,-50%);background:var(--flame);border-radius:1px;box-shadow:0 0 22px 8px rgba(255,90,40,.45);animation:fl 1.6s infinite alternate ease-in-out}
+@keyframes fl{to{box-shadow:0 0 30px 12px rgba(255,90,40,.6);opacity:.92}}
+.glass{position:absolute;width:calc(4.2cqw*var(--k));height:calc(4.6cqw*var(--k));transform:translate(-50%,-50%);border:1px solid #777;border-top-color:#aaa;border-radius:0 0 1cqw 1cqw;background:rgba(255,255,255,.07)}
+.glass::after{content:"";position:absolute;left:-40%;right:-40%;bottom:-25%;height:35%;border:1px solid #4a4a52;border-radius:50%}
+/* chairs */
+.chair{position:absolute;width:11cqw;height:16cqw;--o:0;--dx:0cqw;--dy:0cqw;transform:translate(-50%,-50%) translate(calc(var(--dx)*(1 + var(--o))),calc(var(--dy)*(1 + var(--o)))) scale(var(--k));transition:transform .5s ease}
+.chair.out{--o:2}
+.chair::before,.chair::after{content:"";position:absolute;border-radius:1cqw}
+.chair::before{background:#34343c}.chair::after{background:#202026}
+.chair.L{--dx:-2.5cqw}.chair.R{--dx:2.5cqw}
+.chair.L::before{left:0;top:0;bottom:0;width:2.6cqw}.chair.L::after{left:3cqw;right:0;top:3cqw;bottom:2cqw}
+.chair.R::before{right:0;top:0;bottom:0;width:2.6cqw}.chair.R::after{right:3cqw;left:0;top:3cqw;bottom:2cqw}
+.chair.H,.chair.F{width:16cqw;height:11cqw}
+.chair.H{--dy:-2.5cqw}.chair.F{--dy:2.5cqw}
+.chair.H::before{left:0;right:0;top:0;height:2.6cqw}.chair.H::after{left:3cqw;right:3cqw;top:3cqw;bottom:0}
+.chair.F::before{left:0;right:0;bottom:0;height:2.6cqw}.chair.F::after{left:3cqw;right:3cqw;bottom:3cqw;top:0}
+/* people */
+.p{position:absolute;width:15cqw;height:20cqw;transform:translate(-50%,-50%);transition:left .6s ease,top .6s ease}
+.p.walk{transition:left 1.8s linear,top 1.8s linear}
+.fig{position:absolute;inset:0;transform:scale(var(--k))}
+.head{position:absolute;left:50%;top:0;width:7cqw;height:7cqw;margin-left:-3.5cqw;border-radius:50%;background:#bdbdbd;border:.6cqw solid #101012;transition:box-shadow .2s,background .2s}
+.body{position:absolute;left:50%;top:6.5cqw;width:9cqw;height:11cqw;margin-left:-4.5cqw;border-radius:4.5cqw 4.5cqw 1.5cqw 1.5cqw;background:#9a9a9a;border:.6cqw solid #101012;transition:height .4s}
+.stand .body{height:9cqw}
+.arm{position:absolute;top:9cqw;width:7cqw;height:2.6cqw;border-radius:2cqw;background:#bdbdbd;border:.6cqw solid #101012}
+.p.L .arm{left:50%}.p.R .arm{right:50%}.p.H .arm,.p.F .arm,.stand .arm{display:none}
+.legs{position:absolute;left:50%;top:15cqw;width:6cqw;margin-left:-3cqw;height:5.5cqw;display:flex;justify-content:space-between;opacity:0;transition:opacity .3s}
+.legs i{width:2.4cqw;height:100%;background:#9a9a9a;border:.5cqw solid #101012;border-radius:1cqw;transform-origin:50% 0}
+.stand .legs{opacity:1}
+.walk .legs i:first-child{animation:st .38s infinite alternate ease-in-out}
+.walk .legs i:last-child{animation:st .38s infinite alternate-reverse ease-in-out}
+@keyframes st{from{transform:rotate(-22deg)}to{transform:rotate(22deg)}}
+.walk .head,.walk .body{animation:bob .38s infinite alternate ease-in-out}
+@keyframes bob{to{transform:translateY(-.8cqw)}}
+.name{position:absolute;top:calc(11.5cqw + 7.5cqw*var(--k));left:-4cqw;right:-4cqw;text-align:center;font-size:clamp(10px,2.6cqw,12px);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:top .4s}
+.stand .name{top:calc(11cqw + 10cqw*var(--k))}
+.p.me .name{color:var(--glow)}
+.p.talk .head{background:#fff;box-shadow:0 0 0 1cqw rgba(255,217,160,.35),0 0 18px 4px rgba(255,217,160,.55)}
+.p.muted .head::after{content:"";position:absolute;inset:50% 15%;height:2px;background:#101012;transform:rotate(-30deg)}
+.crown{position:absolute;left:50%;top:-3.2cqw;transform:translateX(-50%);font-size:3.4cqw;filter:grayscale(1) brightness(1.6)}
+/* ui */
+.ui{position:absolute;left:0;right:0;bottom:0;padding:3cqw 4cqw 4cqw;display:none;gap:2cqw;flex-wrap:wrap;justify-content:center;background:linear-gradient(transparent,var(--bg) 40%);z-index:3}
+button{font:inherit;font-size:clamp(11px,3cqw,13px);color:var(--ink);background:#14141a;border:1px solid #34343c;border-radius:999px;padding:2.4cqw 4cqw;cursor:pointer}
+button:hover{border-color:var(--glow)}button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+button.on{background:var(--ink);color:#0a0a0c;border-color:var(--ink)}
+.link{width:100%;text-align:center;color:var(--dim);font-size:clamp(10px,2.6cqw,12px);word-break:break-all}
+.gate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4cqw;padding:8cqw;text-align:center;background:rgba(7,7,10,.82);backdrop-filter:blur(3px);z-index:5}
+.gate p{margin:0;color:var(--dim);font-size:clamp(11px,3cqw,14px);line-height:1.7;max-width:34ch}
+.gate h2{margin:0;font-size:clamp(18px,6cqw,26px);letter-spacing:.06em}
+input{font:inherit;background:#101014;color:var(--ink);border:1px solid #34343c;border-radius:8px;padding:3cqw 4cqw;width:min(64cqw,300px);text-align:center}
+.g{background:var(--ink);color:#0a0a0c;border-color:var(--ink);font-weight:700}
+@media (prefers-reduced-motion:reduce){.candle,.walk .legs i,.walk .head,.walk .body{animation:none}}
+</style>
 </head>
 <body>
 <div class="app" id="app">
@@ -34,6 +97,139 @@
     <button class="g" id="go">Google ile devam et (demo)</button>
   </div>
 </div>
-<script src="assets/app.js"></script>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var TOP=26,H=42;
+function half(y){return 7+15*(y-TOP)/H}
+function K(y){return .6+(y-24)*.0105}
+function mk(c,cl){var d=document.createElement('div');d.className=cl;return d}
+// seats: head, 4 rows of left/right, foot
+var S=[{x:50,y:24,c:'H'}];
+[33,42,51,60].forEach(function(y){var o=half(y)+6*K(y);S.push({x:50-o,y:y,c:'L'},{x:50+o,y:y,c:'R'})});
+S.push({x:50,y:71,c:'F'});
+S.forEach(function(s,i){
+  s.k=K(s.y);s.dir=s.c==='R'?1:-1;
+  s.spot=(s.c==='H'||s.c==='F')?50-16*s.k:s.x+s.dir*14*s.k;
+  s.out=s.c==='R'?110:-10;
+  var c=mk(0,'chair '+s.c);c.style.left=s.x+'%';c.style.top=s.y+'%';c.style.setProperty('--k',s.k);
+  $('chairs').appendChild(c);s.ch=c;
+  if(i>0&&i<9){var g=mk(0,'glass');g.style.left=(50+(s.c==='L'?-1:1)*(half(s.y)-3.5))+'%';g.style.top=(s.y+1)+'%';g.style.setProperty('--k',s.k);$('glasses').appendChild(g)}
+});
+var NAMES=['Deniz','Elif','Kaan','Zeynep','Mert','Selin','Burak','Ada','Can'];
+var people=[],occ=[],me=null,started=false,hostDone=false,roomId=(location.hash||'').slice(1),isGuest=!!roomId,ctx=null,an=null,buf=null,micOn=true,looping=false;
+if(!roomId)roomId='masa-'+Math.random().toString(36).slice(2,7);
+
+function seat(name,o){
+  var idx=-1;for(var j=0;j<10;j++){if(!occ[j]){idx=j;break}}
+  if(idx<0)return null;
+  var s=S[idx],el=mk(0,'p '+s.c+(o.me?' me':''));
+  el.style.setProperty('--k',s.k);el.style.top=s.y+'%';
+  el.innerHTML='<div class="fig">'+(o.host?'<div class="crown">♛</div>':'')+'<div class="body"></div><div class="arm"></div><div class="legs"><i></i><i></i></div><div class="head"></div></div><div class="name"></div>';
+  el.querySelector('.name').textContent=name+(o.me?' (sen)':'');
+  var p={el:el,name:name,me:!!o.me,fake:!o.me,i:idx,gone:false};
+  occ[idx]=p;people.push(p);
+  if(o.instant){el.style.left=s.x+'%';$('seats').appendChild(el)}
+  else{
+    el.classList.add('stand','walk');el.style.left=s.out+'%';$('seats').appendChild(el);
+    s.ch.classList.add('out');void el.offsetWidth;
+    el.style.left=s.spot+'%';              // yürüyerek sandalyenin yanına gel
+    setTimeout(function(){
+      if(p.gone)return;
+      el.classList.remove('walk','stand');el.style.left=s.x+'%';   // otur
+      setTimeout(function(){if(!p.gone)s.ch.classList.remove('out')},350);
+    },1850);
+  }
+  status();return p;
+}
+function unseat(p){
+  var s=S[p.i];occ[p.i]=null;p.gone=true;
+  people.splice(people.indexOf(p),1);
+  var el=p.el;el.classList.remove('talk');
+  s.ch.classList.add('out');                       // sandalye geri itilir
+  el.classList.remove('walk');el.classList.add('stand');el.style.left=s.spot+'%';   // ayağa kalk
+  setTimeout(function(){el.classList.add('walk');el.style.left=s.out+'%'},650);      // yürüyüp git
+  setTimeout(function(){el.remove()},2600);
+  status();
+}
+function status(){
+  $('sub').style.display='block';
+  $('sub').textContent=people.length+' / 10 kişi masada';
+  $('title').textContent=people.length<10?'MASA KURULDU. '+(10-people.length)+' SANDALYE BOŞ.':'MASA DOLDU.';
+}
+function start(){
+  var n=($('nm').value||'').trim()||'Misafir';
+  $('gate').style.display='none';$('ui').style.display='flex';
+  $('link').textContent=location.href.split('#')[0]+'#'+roomId;
+  if(!started){started=true;
+    if(isGuest){seat('Ayşe',{instant:true,host:true});hostDone=true}
+  }
+  me=seat(n,{me:true,host:!hostDone});hostDone=true;
+  micOn=true;$('mic').className='on';$('mic').textContent='Mikrofon açık';
+  mic();
+  document.title='Masa · '+roomId;
+}
+$('go').onclick=start;
+$('nm').addEventListener('keydown',function(e){if(e.key==='Enter')start()});
+if(isGuest){$('gt').textContent='Masaya davetlisin';$('gp').textContent='Ayşe seni masasına çağırdı. Adını yaz, yürü, otur.';}
+
+// demo guests
+$('add').onclick=function(){
+  var used=people.map(function(p){return p.name}),n=NAMES.filter(function(x){return used.indexOf(x)<0})[0]||'Konuk';
+  seat(n,{});
+};
+$('kick').onclick=function(){
+  var f=people.filter(function(p){return p.fake});
+  if(f.length)unseat(f[Math.floor(Math.random()*f.length)]);
+};
+$('leave').onclick=function(){
+  if(!me)return;
+  var m=me;me=null;stopMic();unseat(m);
+  setTimeout(function(){
+    $('ui').style.display='none';$('gate').style.display='flex';
+    $('gt').textContent='Masadan kalktın';$('gp').textContent='İstersen yeniden gel, sandalyen seni bekliyor.';
+  },2400);
+};
+$('copy').onclick=function(){
+  var t=$('link').textContent;
+  try{navigator.clipboard.writeText(t).then(function(){$('copy').textContent='Kopyalandı'})}catch(e){$('copy').textContent='Linki elle kopyala'}
+  setTimeout(function(){$('copy').textContent='Linki kopyala'},1600);
+};
+
+// microphone: real level meter if allowed
+function mic(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return;
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
+    ctx=new (window.AudioContext||window.webkitAudioContext)();
+    var src=ctx.createMediaStreamSource(st);an=ctx.createAnalyser();an.fftSize=512;src.connect(an);buf=new Uint8Array(an.fftSize);
+    st.getAudioTracks().forEach(function(t){t.enabled=micOn});
+    $('mic').onclick=toggle;window._st=st;
+    if(!looping){looping=true;loop()}
+  }).catch(function(){$('mic').textContent='Mikrofon izni yok';});
+}
+function stopMic(){
+  if(window._st){window._st.getTracks().forEach(function(t){t.stop()});window._st=null}
+  if(ctx){try{ctx.close()}catch(e){}ctx=null}
+  an=null;
+}
+function toggle(){
+  micOn=!micOn;$('mic').className=micOn?'on':'';$('mic').textContent=micOn?'Mikrofon açık':'Mikrofon kapalı';
+  if(window._st)window._st.getAudioTracks().forEach(function(t){t.enabled=micOn});
+  if(me){me.el.classList.toggle('muted',!micOn)}
+}
+$('mic').onclick=toggle;
+function loop(){
+  if(an&&me){an.getByteTimeDomainData(buf);var m=0;for(var i=0;i<buf.length;i++){m=Math.max(m,Math.abs(buf[i]-128))}
+    me.el.classList.toggle('talk',micOn&&m>14)}
+  requestAnimationFrame(loop);
+}
+// fake guests take turns "speaking" in the demo
+setInterval(function(){
+  var f=people.filter(function(p){return p.fake});
+  f.forEach(function(p){p.el.classList.remove('talk')});
+  if(f.length&&Math.random()<.75)f[Math.floor(Math.random()*f.length)].el.classList.add('talk');
+},2200);
+})();
+</script>
 </body>
 </html>
