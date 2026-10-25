@@ -62,8 +62,8 @@ h1{position:absolute;top:3.5%;left:0;right:0;margin:0;text-align:center;font-siz
 @keyframes st{from{transform:rotate(-22deg)}to{transform:rotate(22deg)}}
 .walk .head,.walk .body{animation:bob .38s infinite alternate ease-in-out}
 @keyframes bob{to{transform:translateY(-.8cqw)}}
-.name{position:absolute;top:calc(11.5cqw + 7.5cqw*var(--k));left:-4cqw;right:-4cqw;text-align:center;font-size:clamp(10px,2.6cqw,12px);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:top .4s}
-.stand .name{top:calc(11cqw + 10cqw*var(--k))}
+.name{position:absolute;top:calc(10cqw*(1 - var(--k)) - .8cqw);transform:translateY(-100%);left:-4cqw;right:-4cqw;text-align:center;font-size:clamp(10px,2.6cqw,12px);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:top .4s;text-shadow:0 0 4px #000,0 1px 2px #000;pointer-events:none}
+.p.host .name{top:calc(10cqw*(1 - var(--k)) - 3.6cqw*var(--k) - .8cqw)}
 .p.me .name{color:var(--glow)}
 .p.talk .head{background:#fff;box-shadow:0 0 0 1cqw rgba(255,217,160,.35),0 0 18px 4px rgba(255,217,160,.55)}
 .p.muted .head::after{content:"";position:absolute;inset:50% 15%;height:2px;background:#101012;transform:rotate(-30deg)}
@@ -150,15 +150,43 @@ input[type=checkbox]{width:auto;vertical-align:middle}
 .lis .p{cursor:default}
 #live.on{background:#ff4a2e;border-color:#ff4a2e;color:#0a0a0c}
 /* alt çubuk: mobilde 4 sütunlu düzenli ızgara */
-.ui{display:none;padding:10px 10px calc(34px + env(safe-area-inset-bottom,0px))}
+.ui{display:none;padding:10px 10px calc(54px + env(safe-area-inset-bottom,0px))}
 .ui.show{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .ui button{min-height:38px;padding:6px 4px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ui .link{display:none}
-#leave{grid-column:span 3;border-color:#7a3a3a;color:#ffb4b4}
+#leave{grid-column:span 2;border-color:#7a3a3a;color:#ffb4b4}
+/* masa sahibinde 4 sütunluk satır dolu olur: çık butonu tam satır */
+.ui:has(#live:not([hidden])) #leave{grid-column:1/-1}
 #leave.sure{background:#ff4a2e;border-color:#ff4a2e;color:#0a0a0c;font-weight:700}
 @media(min-width:700px){.ui.show{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.ui .link{display:block}.ui button{padding:8px 14px;font-size:13px}#leave{grid-column:auto}}
 #ol-list{bottom:calc(var(--uih,150px) + 10px)}
 @media(max-width:1159px){#rp,#chat{bottom:calc(var(--uih,150px) + 10px)}}
+/* mum alevi */
+.candle::before{content:"";position:absolute;left:50%;bottom:calc(100% + .3cqw);width:1.9cqw;height:3.4cqw;margin-left:-.95cqw;border-radius:50% 50% 50% 50%/65% 65% 35% 35%;background:radial-gradient(ellipse at 50% 75%,#fff6c8 0,#ffd36b 35%,#ff8a2b 70%,rgba(255,90,40,0) 100%);transform-origin:50% 100%;animation:flm 1.1s infinite alternate ease-in-out;box-shadow:0 0 12px 4px rgba(255,160,60,.5)}
+.candle::after{content:"";position:absolute;left:50%;bottom:100%;width:.35cqw;height:.9cqw;margin-left:-.17cqw;background:#1a1a1a}
+@keyframes flm{0%{transform:scale(1,1) rotate(-3deg)}50%{transform:scale(.92,1.08) rotate(2deg)}100%{transform:scale(1.05,.95) rotate(-1deg)}}
+/* bardaklar */
+#glasses{position:absolute;inset:0;pointer-events:none}
+.glass{pointer-events:auto;cursor:pointer;--lc:#b4531c;--lv:0;--sx:0;--sy:0;--rt:0deg;-webkit-tap-highlight-color:transparent}
+.glass::before{content:"";position:absolute;inset:-70%}
+.glass.cof{--lc:#3a1f12}
+.liq{position:absolute;left:8%;right:8%;bottom:0;height:calc(var(--lv)*85%);background:var(--lc);border-radius:0 0 .8cqw .8cqw;transition:height 1.2s ease;pointer-events:none}
+.stm,.stm::before{position:absolute;bottom:100%;left:50%;width:.5cqw;height:2.2cqw;background:linear-gradient(rgba(255,255,255,.4),transparent);border-radius:1cqw;opacity:0;pointer-events:none}
+.stm::before{content:"";left:-1.4cqw;bottom:0}
+.glass.hot .stm,.glass.hot .stm::before{animation:stm 2.4s infinite ease-out}
+.glass.hot .stm::before{animation-delay:-1.1s}
+@keyframes stm{0%{opacity:0;transform:translateY(0) scaleY(.6)}30%{opacity:.7}100%{opacity:0;transform:translateY(-2.5cqw) scaleY(1.2)}}
+@keyframes sip{0%,100%{transform:translate(-50%,-50%)}28%,72%{transform:translate(-50%,-50%) translate(calc(var(--sx)*4cqw*var(--k)),calc(var(--sy)*4cqw*var(--k))) rotate(var(--rt))}}
+.glass.sip{animation:sip 1.8s ease-in-out;z-index:3}
+@keyframes nod{30%,70%{transform:translateY(.8cqw) rotate(-6deg)}}
+.p.sipn .head{animation:nod 1.8s ease-in-out}
+@media (prefers-reduced-motion:reduce){.candle::before,.glass.sip,.glass.hot .stm,.glass.hot .stm::before,.p.sipn .head{animation:none}}
+/* açılır menü */
+.pop{position:absolute;z-index:9;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:90%;background:#14141a;border:1px solid var(--glow);border-radius:14px;padding:6px;transform:translate(-50%,-110%)}
+.pop button{min-height:36px;padding:4px 12px;font-size:12px}
+#home{background:none;border-color:transparent;color:var(--dim);text-decoration:underline}
+#vc.on{background:var(--ink);color:#0a0a0c;border-color:var(--ink)}
+.lis #vc{display:none}
 /* müzik paneli */
 #rl{min-height:80px}
 #mp{flex:none;max-height:62%;overflow:auto;border-top:1px solid #2a2a32;display:flex;flex-direction:column}
@@ -173,6 +201,13 @@ input[type=checkbox]{width:auto;vertical-align:middle}
 #mres{display:flex;flex-direction:column;gap:2px}
 #mpb button{padding:5px 10px;font-size:11px}
 #mmsg{font-size:11px;color:#ffb4c0}
+#mbar{display:flex;flex-direction:column;gap:2px}
+#mseek{width:100%;accent-color:#ffd9a0;padding:0}
+#mseek:disabled{opacity:.7}
+#mtime{font-size:11px;color:var(--dim);text-align:right}
+#mgo{background:var(--ink)!important;color:#0a0a0c!important;border-color:var(--ink)!important;font-weight:700;padding:8px 10px!important;font-size:12px!important}
+.mrow{display:flex;gap:8px;align-items:center}
+.mrow input{flex:1;min-width:0;width:auto;accent-color:#ffd9a0}
 #mnow.on::before{content:"♪ ";color:var(--glow)}
 </style>
 </head>
@@ -209,11 +244,15 @@ SOFTWARE.</pre>
 <button class="g" id="lx">Kapat</button>
 </div></div>
 <aside id="rp" hidden><div class="ph">AÇIK MASALAR<span id="rc"></span></div><div id="rl"></div>
-<div id="mp" hidden><div class="ph">MÜZİK<span id="mpS"> · Spotify</span></div><div id="mpb">
+<div id="mp" hidden><div class="ph">MÜZİK<span id="mpS"></span></div><div id="mpb">
 <div id="mnow">Şu an çalan şarkı yok.</div>
+<div id="mbar" hidden><input type="range" id="mseek" min="0" max="1000" value="0" aria-label="Şarkı konumu"><div id="mtime"></div></div>
+<button id="mgo" hidden>Çalmaya başla (dokun)</button>
 <div id="mfr"></div>
 <div id="mhost" hidden><div class="sr"><input id="msq" maxlength="120" placeholder="Şarkı ara ya da Spotify linki yapıştır" aria-label="Şarkı ara"><button id="msb">Ara</button></div><div id="mres"></div><button id="mpp" hidden>Duraklat</button></div>
 <button id="mcon">Spotify hesabını bağla</button>
+<div class="mrow" id="mloc" hidden><button id="mopt">Kendi cihazımda kapat</button><input type="range" id="mvol" min="0" max="100" value="80" aria-label="Ses seviyesi"></div>
+<button id="mdis" hidden>Spotify bağlantısını kaldır</button>
 <div id="mmsg"></div>
 </div></div></aside>
 <aside id="chat" hidden><div id="msgs"></div><div class="cw"><select id="cto" aria-label="Alıcı"><option value="">Herkese</option></select></div><div class="cin"><input id="ci" maxlength="300" placeholder="Mesaj yaz…" aria-label="Mesaj"><button id="cs">Gönder</button></div></aside>
@@ -230,6 +269,7 @@ SOFTWARE.</pre>
     <button id="ct">Sohbet</button>
     <button id="rt">Masa/Müzik</button>
     <button id="copy">Link</button>
+    <button id="vc">Ses: Normal</button>
     <button id="ol">Kişiler (0)</button>
     <button id="live" hidden>Yayına al</button>
     <button id="lcopy" hidden>Dinleme linki</button>
@@ -241,6 +281,7 @@ SOFTWARE.</pre>
     <p id="gp">Masayı kur, linki arkadaşlarına gönder. Linke tıklayan herkes masaya yürüyüp oturur, sen başköşede kalırsın.</p>
     <input id="nm" placeholder="Takma adın (gerçek adın değil)" maxlength="16" aria-label="Takma ad" hidden>
     <button class="g" id="go">Google ile devam et</button>
+    <button id="home" hidden>Ana menüye dön</button>
     <div id="lobby" hidden>
       <input id="tp" placeholder="Konu: ne konuşulsun?" maxlength="60" aria-label="Konu">
       <label><input type="checkbox" id="pv"> Özel masa (listede görünmez, sadece linkle girilir)</label>
@@ -273,7 +314,12 @@ S.forEach((s,i)=>{
   s.out=s.c==='R'?110:-10;
   const c=mk('chair '+s.c);c.style.left=s.x+'%';c.style.top=s.y+'%';c.style.setProperty('--k',s.k);
   $('chairs').appendChild(c);s.ch=c;
-  if(i>0&&i<9){const g=mk('glass');g.style.left=(50+(s.c==='L'?-1:1)*(half(s.y)-3.5))+'%';g.style.top=(s.y+1)+'%';g.style.setProperty('--k',s.k);$('glasses').appendChild(g)}
+  {const g=mk('glass'),mid=i===0||i===9;
+    g.style.left=(mid?55:50+(s.c==='L'?-1:1)*(half(s.y)-3.5))+'%';g.style.top=(i===0?29.5:i===9?66:s.y+1)+'%';g.style.setProperty('--k',s.k);
+    g.style.setProperty('--sx',s.c==='L'?-1:s.c==='R'?1:0);g.style.setProperty('--sy',s.c==='H'?-1:s.c==='F'?1:0);g.style.setProperty('--rt',s.c==='L'?'-32deg':s.c==='R'?'32deg':'0deg');
+    g.innerHTML='<i class="stm"></i><i class="liq"></i>';
+    g.onclick=e=>{e.stopPropagation();cupClick(i,g)};
+    $('glasses').appendChild(g);s.gl=g}
 });
 
 /* ---------- sahne: otur / kalk ---------- */
@@ -283,7 +329,7 @@ function seat(sid,name,idx,o){
   el.style.setProperty('--k',s.k);el.style.top=s.y+'%';
   el.innerHTML='<div class="fig">'+'<div class="crown">♛</div>'+'<div class="body"></div><div class="arm"></div><div class="arm b"></div><div class="legs"><i></i><i></i></div><div class="head"></div></div><div class="name"></div>';
   el.querySelector('.name').textContent=name+(o.me?' (sen)':'');
-  if(!o.me)el.onclick=()=>{if(!room||p.gone)return;$('cto').value=sid;if($('cto').value!==sid)return;$('chat').hidden=false;if(mobile())$('rp').hidden=true;upPh();$('ci').focus()};
+  if(!o.me)el.onclick=e=>{e.stopPropagation();personClick(p,el)};
   const p={el,sid,name,i:idx,gone:false};occ[idx]=p;P[sid]=p;
   if(o.instant){el.style.left=s.x+'%';$('seats').appendChild(el)}
   else{
@@ -295,7 +341,7 @@ function seat(sid,name,idx,o){
   status();return p;
 }
 function unseat(p){
-  const s=S[p.i];if(occ[p.i]===p)occ[p.i]=null;delete P[p.sid];p.gone=true;
+  cupReset(p.i);const s=S[p.i];if(occ[p.i]===p)occ[p.i]=null;delete P[p.sid];p.gone=true;
   const el=p.el;el.classList.remove('talk');s.ch.classList.add('out');
   el.classList.remove('walk');el.classList.add('stand');el.style.left=s.spot+'%';
   setTimeout(()=>{el.classList.add('walk');el.style.left=s.out+'%'},650);
@@ -332,7 +378,7 @@ let app,auth,db,user,myName='Misafir',first=true,unsubs=[],pcs={},online={};
 const boot=()=>{
   if(firebaseConfig.apiKey==='BURAYA'){gate('Firebase ayarı eksik','index.html içindeki firebaseConfig alanını kendi projenin bilgileriyle doldur.','—');return}
   app=initializeApp(firebaseConfig);auth=getAuth(app);db=getDatabase(app);
-  if(location.hash)gate(isL()?'Yayına davetlisin':'Masaya davetlisin','Google ile giriş yap. Masada kimse seni adınla tanımayacak.','Google ile devam et');
+  if(location.hash){gate(isL()?'Yayına davetlisin':'Masaya davetlisin','Google ile giriş yap. Masada kimse seni adınla tanımayacak.','Google ile devam et');$('home').hidden=false}
   onAuthStateChanged(auth,async u=>{
     user=u;if(!u)return;
     sid=rid(8);                                   // oturuma özel rastgele kimlik; Google kimliği listelere yazılmaz
@@ -378,6 +424,7 @@ async function join(){
   document.title='Masa · '+room;micOn=true;$('leave').textContent='Masadan kalk';$('mic').className='on';$('mic').textContent='Mik. açık';
   try{localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});meter(localStream,sid)}
   catch(e){localStream=null;$('mic').textContent='Mik. izni yok'}
+  hostMuted=false;await applyVoice();
   const R=room;
   unsubs.push(onValue(ref(db,`rooms/${R}/live`),sn=>{
     if(room!==R)return;
@@ -416,6 +463,7 @@ async function leave(quiet){
   if(Object.keys(P).length<=1&&music)remove(ref(db,`rooms/${r}/music`));
   room=null;music=null;syncPlay();mUI();renderTables();
   unsubs.forEach(f=>f());unsubs=[];Object.keys(pcs).forEach(closePeer);mixOff();liveOn=false;lisN=0;$('live').hidden=true;$('lcopy').hidden=true;
+  voiceOff();cupResetAll();closePop();hostMuted=false;
   if(localStream)localStream.getTracks().forEach(t=>t.stop());localStream=null;meters={};
   const mr=ref(db,`rooms/${r}/members/${sid}`),sr=ref(db,`rooms/${r}/seats/${m.i}`);
   onDisconnect(mr).cancel();onDisconnect(sr).cancel();remove(mr);remove(sr);
@@ -438,7 +486,7 @@ const send=(to,type,data)=>push(ref(db,`signals/${room}/${to}`),{from:sid,type,d
 function peer(id,late){
   if(pcs[id])return pcs[id];
   const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});pc.q=[];pc.ondatachannel=e=>setupDC(id,e.channel);if(!late)setupDC(id,pc.createDataChannel('c'));
-  if(!late){if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));else pc.addTransceiver('audio',{direction:'recvonly'})}
+  if(!late){if(localStream)outStream().getTracks().forEach(t=>pc.addTrack(t,outStream()));else pc.addTransceiver('audio',{direction:'recvonly'})}
   pc.onicecandidate=e=>{if(e.candidate)send(id,'ice',e.candidate.toJSON())};
   pc.ontrack=e=>{
     let a=$('a_'+id);if(!a){a=document.createElement('audio');a.id='a_'+id;a.autoplay=true;document.body.appendChild(a)}
@@ -452,12 +500,13 @@ async function call(id){
 }
 async function handle(v){
   const d=JSON.parse(v.data);
+  if(v.type==='hmute'||v.type==='hunmute'||v.type==='hkick'){modCmd(v);return}
   if(v.type==='loffer'){hostAnswer(v.from,d);return}
   if(v.type==='lanswer'||v.type==='lice'){lsig(v,d);return}
   if(v.type==='lfull'){if(LS){LS.full=true;lclose();status()}return}
   if(v.type==='offer'){
     const pc=peer(v.from,true);await pc.setRemoteDescription(d);
-    if(localStream)localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+    if(localStream)outStream().getTracks().forEach(t=>pc.addTrack(t,outStream()));
     for(const c of pc.q.splice(0))await pc.addIceCandidate(c);
     await pc.setLocalDescription(await pc.createAnswer());
     send(v.from,'answer',{type:pc.localDescription.type,sdp:pc.localDescription.sdp});
@@ -477,7 +526,7 @@ const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
 function mixOn(){
   if(mixDest)return;
   const a=ac();mixDest=a.createMediaStreamDestination();
-  if(localStream){try{const s=a.createMediaStreamSource(localStream);s.connect(mixDest);mixSrc[sid]=s}catch(e){}}
+  if(localStream){try{const s=a.createMediaStreamSource(outStream());s.connect(mixDest);mixSrc[sid]=s}catch(e){}}
   for(const id in pcs){const au=$('a_'+id);if(au&&au.srcObject)mixAdd(id,au.srcObject)}
 }
 function mixAdd(id,stream){
@@ -638,7 +687,7 @@ let LB={},cnt={},lobbyOn=false;
 function lobby(){
   const inv=!!location.hash;
   gate(inv?(isL()?'Yayına davetlisin':'Masaya davetlisin'):'Bir masa seç',inv?(isL()?'Takma adını yaz, yayını dinle.':'Takma adını yaz, masaya otur.'):'Konusu hoşuna giden masaya otur, yayındaki masayı dinle ya da kendi masanı kur. Adın görünmez, takma adın görünür.',inv&&isL()?'Yayını dinle':'Masaya otur');
-  $('nm').hidden=false;$('go').hidden=!inv;$('lobby').hidden=inv;
+  $('nm').hidden=false;$('go').hidden=!inv;$('lobby').hidden=inv;$('home').hidden=!inv;
   }function watchLobby(){if(lobbyOn)return;lobbyOn=true;
   onValue(ref(db,'lobby'),sn=>{LB=sn.val()||{};
     for(const id in LB)if(!(id in cnt)){cnt[id]=0;onValue(ref(db,`rooms/${id}/seats`),s=>{cnt[id]=s.size;renderTables()})}
@@ -685,7 +734,7 @@ async function ask(id){
   if(!(await get(ref(db,`rooms/${id}/members`))).val()){join();return}   // masada kimse yoksa direkt otur
   myName=($('nm').value||'').trim().slice(0,16)||'Anonim';
   const rq=ref(db,`rooms/${id}/requests/${sid}`);await set(rq,{name:myName});onDisconnect(rq).remove();
-  gate('İstek gönderildi','Masa sahibi onaylayınca masaya yürüyeceksin…','Vazgeç');$('nm').hidden=true;$('lobby').hidden=true;
+  gate('İstek gönderildi','Masa sahibi onaylayınca masaya yürüyeceksin…','Vazgeç');$('nm').hidden=true;$('lobby').hidden=true;$('home').hidden=true;
   const u1=onValue(ref(db,`rooms/${id}/approved/${sid}`),s=>{if(s.val()){stopWait();remove(ref(db,`rooms/${id}/approved/${sid}`));join()}});
   const u2=onValue(ref(db,`rooms/${id}/denied/${sid}`),s=>{if(s.val()){stopWait();remove(ref(db,`rooms/${id}/denied/${sid}`));history.replaceState(null,'',location.pathname);lobby();$('gp').textContent='İsteğin kabul edilmedi.'}});
   waiting={rq,off:()=>{u1();u2()},timer:setTimeout(()=>{if(waiting){stopWait();history.replaceState(null,'',location.pathname);lobby();$('gp').textContent='Masa sahibinden yanıt gelmedi.'}},90000)};
@@ -704,7 +753,7 @@ function answer(id,ok){set(ref(db,`rooms/${room}/${ok?'approved':'denied'}/${id}
 
 /* ---------- sohbet: tarayıcıdan tarayıcıya (DataChannel), sunucuya yazılmaz ---------- */
 const dcs={};
-function setupDC(id,dc){dcs[id]=dc;dc.onmessage=e=>{try{const m=JSON.parse(e.data),n=(P[id]&&P[id].name)||String(m.n).slice(0,16),t=String(m.t).slice(0,300);
+function setupDC(id,dc){dcs[id]=dc;dc.onopen=()=>cupSendState(dc);if(dc.readyState==='open')cupSendState(dc);dc.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.d){cupMsg(id,m);return}const n=(P[id]&&P[id].name)||String(m.n).slice(0,16),t=String(m.t).slice(0,300);
   if(m.w){addMsg(n+' → sana (fısıltı)',t,true);if($('chat').hidden){$('chat').hidden=false;if(mobile())$('rp').hidden=true}}else addMsg(n,t)}catch(x){}}}
 function addMsg(n,t,w){const d=mk(w?'m w':'m'),b=document.createElement('b');b.textContent=n+': ';d.append(b,document.createTextNode(t));$('msgs').append(d);$('msgs').scrollTop=1e9}
 function sendMsg(){
@@ -728,18 +777,21 @@ $('ct').onclick=()=>{$('chat').hidden=!$('chat').hidden;if(!$('chat').hidden&&mo
 $('rt').onclick=()=>{$('rp').hidden=!$('rp').hidden;if(!$('rp').hidden&&mobile())$('chat').hidden=true};
 
 /* ---------- müzik: Spotify ----------
-   Masa sahibi Spotify'ı bağlar, şarkı seçer. Şarkı bilgisi (id + konum + zaman) Firebase'e yazılır;
-   masadaki herkesin tarayıcısı aynı noktadan çalar. Spotify sesi şifreli olduğu için "yayın karışımına"
-   katılamaz: her dinleyici kendi cihazında çalar (Premium'lu ve bağlıysa tam şarkı, değilse gömülü oynatıcı). */
-const SPOTIFY_CLIENT_ID='420e13ae9ea7494f970edad74b10aada';   // Spotify Developer Dashboard → Client ID (herkese açık bir değerdir)
+   Masa sahibi şarkıyı seçer; şarkı + konum + (sunucu) zamanı Firebase'e yazılır. Spotify'ı bağlayan herkesin
+   cihazı aynı noktadan çalar, 4 sn'de bir kayma ölçülür ve gerekirse düzeltilir. Bağlamayanlar gömülü oynatıcıdan dinler. */
+const SPOTIFY_CLIENT_ID='420e13ae9ea7494f970edad74b10aada';
 const SP_SCOPES='streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
 const SP_REDIR=location.origin+location.pathname;   // Spotify panelindeki Redirect URI ile birebir aynı olmalı
-let spTok=null,spRef=null,spExp=0,spPlayer=null,spDev=null,spReady=false,spLoading=false,spFail=false,music=null,srvOff=0,mEmbed='',spAct=false;
+let spTok=null,spRef=null,spExp=0,spPlayer=null,spDev=null,spReady=false,spLoading=false,spFail=false,spAct=false,spPlaying=false,spOff=false,spLat=400,music=null,srvOff=0,mEmbed='',syncBusy=false,syncAgain=false,seeking=false;
+try{spRef=localStorage.getItem('sp_rt')}catch(e){}
 const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const mmsg=t=>{$('mmsg').textContent=t||''};
+const clampN=(v,a,b)=>Math.max(a,Math.min(b,v));
 const curPos=()=>!music?0:music.playing?music.pos+(Date.now()+srvOff-(music.at||Date.now()+srvOff)):music.pos;
+const shouldPlay=()=>!!(room&&music&&music.playing&&!spOff&&curPos()<music.dur-300);
+const fmt=ms=>{const t=Math.max(0,Math.floor(ms/1000));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 async function spLogin(){
-    const v=b64u(crypto.getRandomValues(new Uint8Array(48)));
+  const v=b64u(crypto.getRandomValues(new Uint8Array(48)));
   const ch=b64u(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)));
   try{localStorage.setItem('sp_v',v);localStorage.removeItem('sp_code')}catch(e){mmsg('Tarayıcı depolaması kapalı, Spotify bağlanamaz.');return}
   const w=window.open('https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,response_type:'code',redirect_uri:SP_REDIR,scope:SP_SCOPES,code_challenge_method:'S256',code_challenge:ch}),'sp','width=480,height=720');
@@ -750,13 +802,15 @@ addEventListener('storage',async e=>{
   if(e.key!=='sp_code'||!e.newValue)return;
   const code=e.newValue;try{localStorage.removeItem('sp_code')}catch(x){}
   try{await spTokenReq({grant_type:'authorization_code',code,redirect_uri:SP_REDIR,code_verifier:localStorage.getItem('sp_v')});try{localStorage.removeItem('sp_v')}catch(x){}spInit()}
-  catch(x){mmsg('Spotify bağlantısı başarısız oldu.')}
+  catch(x){mmsg('Spotify bağlantısı başarısız oldu. Hesabın Spotify panelinde izinli kullanıcılar listesinde olmalı.')}
   spLoading=false;mUI();
 });
 async function spTokenReq(p){
   const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:SPOTIFY_CLIENT_ID,...p})});
-  const j=await r.json();if(!j.access_token)throw new Error('token');
-  spTok=j.access_token;if(j.refresh_token)spRef=j.refresh_token;spExp=Date.now()+j.expires_in*1000-60000;
+  const j=await r.json();
+  if(!j.access_token){if(p.grant_type==='refresh_token'){spRef=null;try{localStorage.removeItem('sp_rt')}catch(e){}}throw new Error('token')}
+  spTok=j.access_token;spExp=Date.now()+j.expires_in*1000-60000;
+  if(j.refresh_token){spRef=j.refresh_token;try{localStorage.setItem('sp_rt',spRef)}catch(e){}}
 }
 async function spGet(){if(Date.now()>spExp&&spRef)await spTokenReq({grant_type:'refresh_token',refresh_token:spRef});return spTok}
 async function spApi(method,path,body){
@@ -766,25 +820,65 @@ async function spApi(method,path,body){
 function spInit(){
   if(spPlayer)return;
   const go=()=>{
-    spPlayer=new Spotify.Player({name:'Masa',getOAuthToken:async cb=>cb(await spGet()),volume:.8});
-    spPlayer.addListener('ready',({device_id})=>{spDev=device_id;spReady=true;spFail=false;mmsg(spAct?'':'Şarkının çalması için ekrana bir kez dokun.');mUI();syncPlay()});
-    spPlayer.addListener('not_ready',()=>{spReady=false;mUI()});
-    spPlayer.addListener('account_error',()=>{spFail=true;spReady=false;mmsg('Tam şarkı için Spotify Premium gerekir. Gömülü oynatıcıdan dinleyebilirsin.');mUI()});
-    spPlayer.addListener('authentication_error',()=>{spReady=false;mmsg('Spotify oturumu geçersiz, yeniden bağla.');spTok=null;spRef=null;spPlayer=null;mUI()});
+    let vol=.8;try{const v=localStorage.getItem('sp_vol');if(v!==null)vol=clampN(+v,0,100)/100}catch(e){}
+    $('mvol').value=Math.round(vol*100);
+    spPlayer=new Spotify.Player({name:'Masa',getOAuthToken:async cb=>{try{cb(await spGet())}catch(e){}},volume:vol});
+    spPlayer.addListener('ready',({device_id})=>{spDev=device_id;spReady=true;spFail=false;mmsg('');mUI();syncPlay()});
+    spPlayer.addListener('not_ready',()=>{spReady=false;spPlaying=false;mUI()});
+    spPlayer.addListener('account_error',()=>{spFail=true;spReady=false;mmsg('Tam şarkı için Spotify Premium gerekir. Aşağıdaki gömülü oynatıcıdan dinleyebilirsin.');mUI()});
+    spPlayer.addListener('authentication_error',()=>{spReady=false;spPlaying=false;mmsg('Spotify oturumu geçersiz, yeniden bağla.');spDisconnect(true)});
     spPlayer.addListener('initialization_error',()=>{spFail=true;mmsg('Bu tarayıcı Spotify oynatıcısını desteklemiyor.');mUI()});
     spPlayer.connect();mUI();
   };
   if(window.Spotify)go();
   else{window.onSpotifyWebPlaybackSDKReady=go;const s=document.createElement('script');s.src='https://sdk.scdn.co/spotify-player.js';document.head.appendChild(s)}
 }
-document.addEventListener('click',()=>{if(spPlayer&&!spAct&&spPlayer.activateElement){spAct=true;try{spPlayer.activateElement()}catch(e){}if(spReady)mmsg('')}},true);
+function spDisconnect(keepMsg){
+  try{spPlayer&&spPlayer.disconnect()}catch(e){}
+  spPlayer=null;spDev=null;spReady=false;spPlaying=false;spAct=false;spTok=null;spRef=null;spFail=false;
+  try{localStorage.removeItem('sp_rt')}catch(e){}
+  if(!keepMsg)mmsg('');mUI();
+}
+function spActivate(){if(spPlayer&&!spAct&&spPlayer.activateElement){spAct=true;try{spPlayer.activateElement()}catch(e){}return true}return false}
+document.addEventListener('click',()=>{if(spActivate()&&spReady&&shouldPlay()&&!spPlaying)syncPlay()},true);
 async function syncPlay(){
   if(!spReady||!spDev)return;
+  if(syncBusy){syncAgain=true;return}
+  syncBusy=true;
   try{
-    if(room&&music&&music.playing&&curPos()<music.dur)await spApi('PUT','me/player/play?device_id='+spDev,{uris:[music.uri],position_ms:Math.max(0,Math.round(curPos()))});
-    else await spApi('PUT','me/player/pause?device_id='+spDev);
+    do{
+      syncAgain=false;
+      if(shouldPlay()){
+        if(!spAct)break;                       // tarayıcı otomatik sese izin vermez: kullanıcı bir kez dokunmalı
+        const t0=Date.now();
+        const r=await spApi('PUT','me/player/play?device_id='+spDev,{uris:[music.uri],position_ms:Math.max(0,Math.round(curPos()+spLat))});
+        if(r.ok){spLat=Math.round(clampN(.5*spLat+.5*(Date.now()-t0),150,1500));spPlaying=true}
+        else if(r.status===403||r.status===401)mmsg('Spotify çalmaya izin vermedi (Premium gerekebilir).');
+      }else if(spPlaying){await spApi('PUT','me/player/pause?device_id='+spDev);spPlaying=false}
+    }while(syncAgain);
   }catch(e){}
+  syncBusy=false;mUI();
 }
+/* kayma düzeltme + ilerleme çubuğu */
+setInterval(async()=>{
+  if(!spReady||!spPlaying||!spPlayer||!shouldPlay())return;
+  try{
+    const st=await spPlayer.getCurrentState();
+    if(!st){spPlaying=false;mUI();return}
+    if(st.paused){spPlaying=false;mUI();return}                     // kullanıcı elle durdurdu: "yeniden katıl" göster
+    const cur=st.track_window&&st.track_window.current_track;
+    if(cur&&music&&cur.id&&cur.id!==music.id){syncPlay();return}   // başka şarkıya geçmiş: masaya geri dön
+    const tg=curPos(),e1=st.position,e2=st.position+(Date.now()-(st.timestamp||Date.now())),d1=tg-e1,d2=tg-e2;
+    if((d1>1500&&d2>1500)||(d1<-1500&&d2<-1500))await spPlayer.seek(Math.max(0,Math.round(tg+spLat*.5)));
+  }catch(e){}
+},4000);
+setInterval(()=>{
+  if(!room||!music)return;
+  const dur=music.dur,pos=clampN(curPos(),0,dur);
+  if(!seeking)$('mseek').value=Math.round(pos/dur*1000);
+  $('mtime').textContent=(pos>=dur-300?'Bitti · ':music.playing?'':'Duraklatıldı · ')+fmt(pos)+' / '+fmt(dur);
+  if(spPlaying&&!shouldPlay())syncPlay();
+},500);
 function mEmbedUpd(){
   const box=$('mfr'),show=!!(room&&music&&!spReady),id=show?music.id:'';
   box.style.display=show?'block':'none';
@@ -792,21 +886,29 @@ function mEmbedUpd(){
   mEmbed=id;box.textContent='';
   if(id){const f=document.createElement('iframe');f.src='https://open.spotify.com/embed/track/'+encodeURIComponent(id)+'?theme=0';f.allow='autoplay; encrypted-media';f.loading='lazy';f.title='Spotify oynatıcı';box.append(f)}
 }
+let mNowKey='';
 function mUI(){
   const inR=!!room,h=!!(inR&&P[sid]&&P[sid].host);
   $('mp').hidden=!inR;if(!inR){mEmbedUpd();return}
-  const n=$('mnow');n.textContent='';
-  if(music){
-    n.className='on';const s=document.createElement('small');
-    s.textContent=(music.artist||'')+(music.playing?'':' · duraklatıldı')+(music.by?' · '+music.by+' açtı':'');
-    n.append(document.createTextNode(music.title||'Şarkı'),s);
-  }else{n.className='';n.textContent=h?'Şarkı ara, masadaki herkes birlikte dinlesin.':'Şu an çalan şarkı yok. Masa sahibi şarkı açınca burada görünür.'}
+  const key=music?[music.id,music.title,music.artist,music.by,music.playing].join('|'):'-'+h;
+  if(key!==mNowKey){
+    mNowKey=key;const n=$('mnow');n.textContent='';
+    if(music){
+      n.className='on';const s=document.createElement('small');
+      s.textContent=(music.artist||'')+(music.by?' · '+music.by+' açtı':'');
+      n.append(document.createTextNode(music.title||'Şarkı'),s);
+    }else{n.className='';n.textContent=h?'Şarkı ara, masadaki herkes birlikte dinlesin.':'Şu an çalan şarkı yok. Masa sahibi şarkı açınca burada görünür.'}
+  }
+  $('mbar').hidden=!music;$('mseek').disabled=!h;
   $('mhost').hidden=!(h&&spTok);
-  $('mpp').hidden=!(h&&music);$('mpp').textContent=music&&music.playing?'Duraklat':'Devam ettir';
-  $('mpS').textContent=spReady?' · bağlı ✓':' · Spotify';
-  const c=$('mcon');c.hidden=spReady||spFail&&!!spTok;
-  c.disabled=spLoading||!!spTok;
-  c.textContent=spTok?'Spotify başlatılıyor…':spLoading?'Açılan pencerede onayla…':h?'Şarkı seçmek için Spotify’ı bağla':'Tam şarkı için Spotify’ı bağla (Premium)';
+  $('mpp').hidden=!(h&&music);$('mpp').textContent=music&&music.playing&&curPos()<music.dur-300?'Duraklat':'Devam ettir';
+  $('mpS').textContent=spReady?' · bağlı':'';
+  const c=$('mcon');c.hidden=!!spTok;c.disabled=spLoading;
+  c.textContent=spLoading?'Açılan pencerede onayla…':h?'Şarkı seçmek için Spotify’ı bağla':'Tam şarkı için Spotify’ı bağla (Premium)';
+  const need=spReady&&shouldPlay()&&(!spAct||!spPlaying);
+  $('mgo').hidden=!need;$('mgo').textContent=spAct?'Müziğe yeniden katıl':'Çalmaya başla (dokun)';
+  $('mloc').hidden=!spReady;$('mopt').textContent=spOff?'Kendi cihazımda aç':'Kendi cihazımda kapat';
+  $('mdis').hidden=!spTok;
   mEmbedUpd();
 }
 async function msearch(){
@@ -823,17 +925,29 @@ async function msearch(){
     });
   }catch(e){R.textContent='';mmsg('Arama başarısız oldu.')}
 }
+function mwrite(o){set(ref(db,`rooms/${room}/music`),{id:o.id,title:o.title,artist:o.artist,dur:o.dur,by:o.by||'',pos:Math.round(o.pos),at:serverTimestamp(),playing:!!o.playing})}
 function mplay(t){
   if(!room||!(P[sid]&&P[sid].host))return;
-  set(ref(db,`rooms/${room}/music`),{id:t.id,title:String(t.name).slice(0,80),artist:t.artists.map(a=>a.name).join(', ').slice(0,80),dur:t.duration_ms,pos:0,at:serverTimestamp(),playing:true,by:myName});
+  mwrite({id:t.id,title:String(t.name).slice(0,80),artist:t.artists.map(a=>a.name).join(', ').slice(0,80),dur:t.duration_ms,pos:0,playing:true,by:myName});
   $('mres').textContent='';$('msq').value='';
 }
 $('mpp').onclick=()=>{
   if(!music||!room||!(P[sid]&&P[sid].host))return;
-  let pos=Math.min(music.dur,Math.round(curPos()));if(!music.playing&&pos>=music.dur-500)pos=0;
-  set(ref(db,`rooms/${room}/music`),{id:music.id,title:music.title,artist:music.artist,dur:music.dur,by:music.by||'',pos,at:serverTimestamp(),playing:!music.playing});
+  let pos=Math.min(music.dur,curPos());const on=music.playing&&pos<music.dur-300;
+  if(!on&&pos>=music.dur-500)pos=0;
+  mwrite(Object.assign({},music,{pos,playing:!on}));
 };
+$('mseek').onpointerdown=()=>{seeking=true};
+$('mseek').onchange=e=>{
+  seeking=false;if(!music||!room||!(P[sid]&&P[sid].host))return;
+  mwrite(Object.assign({},music,{pos:e.target.value/1000*music.dur,playing:true}));
+};
+$('mgo').onclick=()=>{spActivate();spPlaying=false;syncPlay()};
+$('mopt').onclick=()=>{spOff=!spOff;mmsg(spOff?'Müzik bu cihazda kapalı; diğerleri dinlemeye devam ediyor.':'');syncPlay();mUI()};
+$('mvol').oninput=e=>{try{spPlayer&&spPlayer.setVolume(e.target.value/100);localStorage.setItem('sp_vol',e.target.value)}catch(x){}};
+$('mdis').onclick=()=>spDisconnect();
 $('mcon').onclick=spLogin;$('msb').onclick=msearch;$('msq').onkeydown=e=>{if(e.key==='Enter')msearch()};
+if(spRef){spExp=0;spGet().then(()=>{spInit();mUI()}).catch(()=>{})}   // önceki oturumdan sessizce yeniden bağlan
 
 /* ---------- Pascal ---------- */
 (function(){
@@ -937,11 +1051,154 @@ function sit(t,closed){
   };
 })();
 
+/* ---------- açılır menü, kısa bildirim ---------- */
+let popEl=null,flT=null;
+function closePop(){if(popEl){popEl.remove();popEl=null}}
+function popup(anchor,items){
+  closePop();const app=$('app'),ar=app.getBoundingClientRect(),r=anchor.getBoundingClientRect(),d=mk('pop');
+  items.forEach(([t,f])=>{const b=document.createElement('button');b.textContent=t;b.onclick=e=>{e.stopPropagation();closePop();f()};d.append(b)});
+  d.onclick=e=>e.stopPropagation();app.append(d);
+  const w=d.offsetWidth;let x=r.left+r.width/2-ar.left;x=Math.max(w/2+6,Math.min(ar.width-w/2-6,x));
+  d.style.left=x+'px';d.style.top=Math.max(64,r.top-ar.top)+'px';popEl=d;
+}
+document.addEventListener('click',closePop);
+function flash(t){const T=$('toast'),s=document.createElement('span');T.textContent='';s.textContent=t;T.append(s);T.hidden=false;clearTimeout(flT);flT=setTimeout(()=>{T.hidden=true},3500)}
+
+/* ---------- masa yöneticisi: sustur / masadan gönder ----------
+   Komutlar sinyal kanalından gider; alan kişi, gönderenin masa sahibi olduğunu kontrol eder.
+   Not: bu istemci tarafında uygulanır. Kesin güvenlik için Firebase kurallarında da kısıtlamak gerekir. */
+let hostMuted=false;
+function whisperTo(p){if(!room||p.gone)return;$('cto').value=p.sid;if($('cto').value!==p.sid)return;$('chat').hidden=false;if(mobile())$('rp').hidden=true;upPh();$('ci').focus()}
+function personClick(p,el){
+  if(!room||p.gone)return;
+  if(!(P[sid]&&P[sid].host)){whisperTo(p);return}
+  const muted=el.classList.contains('muted');
+  popup(el.querySelector('.head'),[
+    ['Fısılda',()=>whisperTo(p)],
+    [muted?'Susturmayı kaldır':'Sustur',()=>{send(p.sid,muted?'hunmute':'hmute',{});addMsg('masa',p.name+(muted?' için susturma kaldırıldı.':' susturuldu.'))}],
+    ['Masadan gönder',()=>{if(confirm(p.name+' masadan gönderilsin mi?')){send(p.sid,'hkick',{});addMsg('masa',p.name+' masadan gönderildi.')}}]
+  ]);
+}
+function setMic(on){
+  micOn=on;$('mic').className=on?'on':'';$('mic').textContent=on?'Mik. açık':'Mik. kapalı';
+  if(localStream)localStream.getAudioTracks().forEach(t=>t.enabled=on);
+  if(room)set(ref(db,`rooms/${room}/members/${sid}/muted`),!on);
+}
+function modCmd(v){
+  const h=P[v.from];if(!room||!h||!h.host||v.from===sid)return;
+  if(v.type==='hmute'){hostMuted=true;setMic(false);flash('Masa yöneticisi seni susturdu.');addMsg('masa','Masa yöneticisi seni susturdu.')}
+  else if(v.type==='hunmute'){hostMuted=false;setMic(true);flash('Susturman kaldırıldı.');addMsg('masa','Susturman kaldırıldı.')}
+  else if(v.type==='hkick'){
+    flash('Masa yöneticisi seni masadan gönderdi.');
+    leave().then(()=>setTimeout(()=>{if(!room&&!LS)$('gp').textContent='Masa yöneticisi seni masadan gönderdi.'},2700));
+  }
+}
+
+/* ---------- bardaklar: çay / kahve, yudum animasyonu ----------
+   Durum tarayıcıdan tarayıcıya (DataChannel) gider, sunucuya yazılmaz. Sadece oturan kişi kendi bardağına dokunabilir. */
+const CUP={};let cupT=null;
+const myIdx=()=>P[sid]?P[sid].i:-1;
+function cupSet(i,c,lv){
+  const g=S[i]&&S[i].gl;if(!g)return;
+  CUP[i]=lv>0?{c,lv}:null;
+  g.classList.toggle('cof',c==='cof');g.style.setProperty('--lv',lv);g.classList.toggle('hot',lv>0);
+}
+function cupReset(i){if(i==null||i<0||!S[i])return;CUP[i]=null;const g=S[i].gl;if(g){g.classList.remove('hot','sip','cof');g.style.setProperty('--lv',0)}if(i===myIdx())clearTimeout(cupT)}
+function cupResetAll(){clearTimeout(cupT);S.forEach((s,i)=>cupReset(i))}
+function cupBcast(o){const m=JSON.stringify(o);Object.values(dcs).forEach(d=>{if(d.readyState==='open')d.send(m)})}
+function cupSendState(dc){const i=myIdx(),c=CUP[i];if(c&&c.lv>0&&dc.readyState==='open')dc.send(JSON.stringify({d:'cup',c:c.c,lv:c.lv}))}
+function cupSip(i,bc){
+  const c=CUP[i];if(!c||c.lv<=0)return;
+  const lv=Math.max(0,Math.round((c.lv-.2)*10)/10);cupSet(i,c.c,lv);
+  const g=S[i].gl,pe=occ[i]&&occ[i].el;
+  g.classList.remove('sip');void g.offsetWidth;g.classList.add('sip');if(pe)pe.classList.add('sipn');
+  setTimeout(()=>{g.classList.remove('sip');if(pe)pe.classList.remove('sipn')},1900);
+  if(bc)cupBcast({d:'sip'});
+}
+function cupSched(){
+  clearTimeout(cupT);const i=myIdx();if(!room||i<0||!CUP[i])return;
+  cupT=setTimeout(()=>{cupSip(i,true);cupSched()},6000+Math.random()*7000);
+}
+function cupFill(i,c){cupSet(i,c,1);cupBcast({d:'cup',c,lv:1});cupSched()}
+function cupMsg(id,m){
+  const p=P[id];if(!p)return;
+  if(m.d==='cup'&&(m.c==='tea'||m.c==='cof')){const lv=Math.max(0,Math.min(1,+m.lv||0));cupSet(p.i,m.c,lv)}
+  else if(m.d==='sip')cupSip(p.i,false);
+}
+function cupClick(i,g){
+  if(!room||LS)return;
+  if(myIdx()!==i){flash(occ[i]?'Bu bardak '+occ[i].name+'’in. Sadece o dokunabilir.':'Bardağa oturan kişi dokunabilir.');return}
+  const c=CUP[i],items=[['Çay',()=>cupFill(i,'tea')],['Kahve',()=>cupFill(i,'cof')]];
+  if(c&&c.lv>0)items.unshift(['Bir yudum',()=>{cupSip(i,true);cupSched()}]);
+  popup(g,items);
+}
+
+/* ---------- ses değiştirici (isteğe bağlı) ----------
+   Mikrofon sesi tarayıcıda işlenip öyle gönderilir: perde kaydırma (kalın / ince) ya da robot sesi.
+   Kimliği kesin gizlemez; sadece sesi tanınmaz hale getirir. */
+const VOICES=[['normal','Normal'],['kalin','Kalın'],['ince','İnce'],['robot','Robot']];
+let voice='normal',vGraph=null,vStream=null,vBusy=false,vLoaded=false;
+try{const v=localStorage.getItem('masa_voice');if(VOICES.some(x=>x[0]===v))voice=v}catch(e){}
+const outStream=()=>vStream||localStream;
+const WK=`class PS extends AudioWorkletProcessor{
+static get parameterDescriptors(){return[{name:'ratio',defaultValue:1,minValue:.4,maxValue:2.5,automationRate:'k-rate'}]}
+constructor(){super();this.N=16384;this.b=new Float32Array(this.N);this.w=0;this.ph=0;this.W=Math.floor(sampleRate*.045)}
+process(ins,outs,pr){
+const i=ins[0]&&ins[0][0],o=outs[0];if(!o||!o[0])return true;const o0=o[0],r=pr.ratio[0],N=this.N,b=this.b,W=this.W;
+for(let n=0;n<o0.length;n++){
+b[this.w]=i?i[n]:0;this.ph+=(1-r)/W;this.ph-=Math.floor(this.ph);let s=0;
+for(let t=0;t<2;t++){let p=this.ph+t*.5;p-=Math.floor(p);const pos=this.w-(p*W+1),f=Math.floor(pos),fr=pos-f,a=b[((f%N)+N)%N],c=b[(((f+1)%N)+N)%N];s+=(a+(c-a)*fr)*(.5-.5*Math.cos(6.2831853*p))}
+o0[n]=s;this.w=(this.w+1)%N}
+for(let c=1;c<o.length;c++)o[c].set(o0);return true}}
+registerProcessor('ps',PS);`;
+function voiceBtn(){const l=VOICES.find(x=>x[0]===voice)[1];$('vc').textContent='Ses: '+l;$('vc').className=voice==='normal'?'':'on'}
+function voiceOff(){if(vGraph){vGraph.forEach(n=>{try{n.stop&&n.stop()}catch(e){}try{n.disconnect()}catch(e){}});vGraph=null}vStream=null}
+function mixRefresh(){
+  if(!mixDest||!localStream)return;mixDel(sid);
+  try{const s=ac().createMediaStreamSource(outStream());s.connect(mixDest);mixSrc[sid]=s}catch(e){}
+}
+async function applyVoice(){
+  if(vBusy)return;vBusy=true;
+  const os=outStream(),old=os&&os.getAudioTracks()[0];
+  try{
+    voiceOff();
+    if(localStream&&voice!=='normal'){
+      const a=ac(),src=a.createMediaStreamSource(localStream),dst=a.createMediaStreamDestination(),nodes=[src,dst];
+      if(voice==='robot'){
+        const g=a.createGain(),o=a.createOscillator();g.gain.value=0;o.frequency.value=48;o.connect(g.gain);o.start();
+        src.connect(g);g.connect(dst);nodes.push(g,o);
+      }else{
+        if(!vLoaded){await a.audioWorklet.addModule(URL.createObjectURL(new Blob([WK],{type:'application/javascript'})));vLoaded=true}
+        const w=new AudioWorkletNode(a,'ps',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
+        w.parameters.get('ratio').value=voice==='kalin'?.76:1.32;src.connect(w);w.connect(dst);nodes.push(w);
+      }
+      vGraph=nodes;vStream=dst.stream;
+    }
+  }catch(e){voiceOff();voice='normal';flash('Bu tarayıcı ses değiştiriciyi desteklemiyor.')}
+  vBusy=false;
+  const nt=outStream()&&outStream().getAudioTracks()[0];
+  if(nt&&old&&nt!==old)Object.values(pcs).forEach(pc=>pc.getSenders().forEach(s=>{if(s.track===old)s.replaceTrack(nt).catch(()=>{})}));
+  mixRefresh();voiceBtn();
+}
+$('vc').onclick=async()=>{
+  if(vBusy)return;
+  voice=VOICES[(VOICES.findIndex(x=>x[0]===voice)+1)%VOICES.length][0];
+  try{localStorage.setItem('masa_voice',voice)}catch(e){}
+  voiceBtn();await applyVoice();
+  if(voice!=='normal'&&!localStream)flash('Mikrofon izni olmadan ses değişmez.');
+};
+voiceBtn();
+$('home').onclick=()=>{
+  if(waiting)stopWait();
+  history.replaceState(null,'',location.pathname);
+  if(!user){gate('Masana otur','Masayı kur, linki arkadaşlarına gönder. Linke tıklayan herkes masaya yürüyüp oturur, sen başköşede kalırsın.','Google ile devam et');$('home').hidden=true;return}
+  lobby();
+};
+
 /* ---------- mikrofon / link ---------- */
 $('mic').onclick=()=>{if(LS){const a=LS.audio;if(a){a.muted=!a.muted;$('mic').className=a.muted?'':'on';$('mic').textContent=a.muted?'Ses kapalı':'Ses açık'}return}
-  micOn=!micOn;$('mic').className=micOn?'on':'';$('mic').textContent=micOn?'Mik. açık':'Mik. kapalı';
-  if(localStream)localStream.getAudioTracks().forEach(t=>t.enabled=micOn);
-  if(room)set(ref(db,`rooms/${room}/members/${sid}/muted`),!micOn);
+  if(hostMuted){flash('Masa yöneticisi seni susturdu. Mikrofonu o açabilir.');return}
+  setMic(!micOn);
 };
 $('copy').onclick=()=>{
   try{navigator.clipboard.writeText($('link').textContent).then(()=>{$('copy').textContent='Kopyalandı'})}catch(e){$('copy').textContent='Elle kopyala'}
