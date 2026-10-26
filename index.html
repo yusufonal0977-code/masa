@@ -453,7 +453,7 @@ async function start(u){
     let nk=null;try{nk=localStorage.getItem('masa_nick')}catch(e){}
     $('nm').value=nk||((u.isAnonymous?'Misafir':'Anonim')+Math.floor(100+Math.random()*900));myName=$('nm').value;
     const ow=ref(db,'owners/'+sid);await set(ow,u.uid);onDisconnect(ow).remove();   // sadece kurallar okur, istemciler okuyamaz
-    const pr=ref(db,'online/'+sid);set(pr,{name:myName,busy:false});onDisconnect(pr).remove();
+    const pr=ref(db,'online/'+sid);set(pr,{name:myName,busy:false,t:serverTimestamp()});onDisconnect(pr).remove();
     onValue(ref(db,'online'),sn=>{online=sn.val()||{};renderOnline()});
     onChildAdded(ref(db,'invites/'+sid),sn=>{const v=sn.val();remove(sn.ref);if(v)toast(v)});
     onValue(ref(db,'pascal/pets'),s=>{$('pc').textContent=' ♥ '+(s.val()||0)});
@@ -486,13 +486,13 @@ async function join(){
   if(idx<0){room=null;gate('Masa dolu','Bu masada boş sandalye kalmadı.','Yeni masa kur');history.replaceState(null,'',location.pathname);return}
   const sr=ref(db,`rooms/${room}/seats/${idx}`),mr=ref(db,`rooms/${room}/members/${sid}`);
   onDisconnect(sr).remove();onDisconnect(mr).remove();
-  await set(mr,{name:myName,seat:idx,muted:false});
-  set(ref(db,'online/'+sid),{name:myName,busy:true});
+  await set(mr,{name:myName,seat:idx,muted:false,t:serverTimestamp()});
+  set(ref(db,'online/'+sid),{name:myName,busy:true,t:serverTimestamp()});
   let mt=meta;
   if(mt){set(ref(db,`rooms/${room}/meta`),mt);if(!mt.priv)set(ref(db,`lobby/${room}`),{topic:mt.topic});meta=null}
   else mt=(await get(ref(db,`rooms/${room}/meta`))).val()||{topic:'Serbest sohbet'};
   topic=(mt.priv?'🔒 ':'')+mt.topic;
-  curMeta=mt;gate('','','',false);renderTables();upPh();$('chat').hidden=matchMedia('(max-width:1159px)').matches;addMsg('masa','Mesajlar sunucuda saklanmaz; sadece şu an masada olanlar görür. Birine fısıldamak için alıcıyı seç ya da masadaki kişiye tıkla.');$('link').textContent=location.href.split('#')[0]+'#'+room;
+  curMeta=mt;delete dead[room];gate('','','',false);renderTables();upPh();$('chat').hidden=matchMedia('(max-width:1159px)').matches;addMsg('masa','Mesajlar sunucuda saklanmaz; sadece şu an masada olanlar görür. Birine fısıldamak için alıcıyı seç ya da masadaki kişiye tıkla.');$('link').textContent=location.href.split('#')[0]+'#'+room;
   document.title='Masa · '+room;micOn=true;$('leave').textContent='Masadan kalk';$('mic').className='on';$('mic').textContent='Mik. açık';
   try{localStream=await navigator.mediaDevices.getUserMedia({audio:Object.assign({echoCancellation:true,noiseSuppression:true},micDev?{deviceId:{ideal:micDev}}:{})});meter(localStream,sid)}
   catch(e){localStream=null;$('mic').textContent='Mik. izni yok'}
@@ -539,7 +539,7 @@ async function leave(quiet){
   if(localStream)localStream.getTracks().forEach(t=>t.stop());localStream=null;meters={};
   const mr=ref(db,`rooms/${r}/members/${sid}`),sr=ref(db,`rooms/${r}/seats/${m.i}`);
   onDisconnect(mr).cancel();onDisconnect(sr).cancel();remove(mr);remove(sr);
-  set(ref(db,'online/'+sid),{name:myName,busy:false});$('chat').hidden=true;$('msgs').textContent='';topic='';for(const k in REQ)delete REQ[k];renderReqs();
+  set(ref(db,'online/'+sid),{name:myName,busy:false,t:serverTimestamp()});$('chat').hidden=true;$('msgs').textContent='';topic='';for(const k in REQ)delete REQ[k];renderReqs();
   Object.values(P).forEach(p=>{if(p.sid!==sid||quiet){p.el.remove();p.gone=true;occ[p.i]=null;delete P[p.sid]}});
   setTimeout(()=>{cnt[r]=cnt[r]||0;closeIfEmpty(r,20000)},3000);   // son kişi kalktıysa masa kapanır (özel masalar dahil)
   if(!quiet){unseat(m);setTimeout(()=>{history.replaceState(null,'',location.pathname);lobby()},2400)}
@@ -718,7 +718,7 @@ async function listen(R){
   LS={room:R,pc:null,host:null,live:false,audio:null,nonce:'',full:false,unsubs:[]};
   history.replaceState(null,'','#dinle/'+R);
   const lr=ref(db,`rooms/${R}/listeners/${sid}`);await set(lr,{name:myName});onDisconnect(lr).remove();
-  set(ref(db,'online/'+sid),{name:myName,busy:true});
+  set(ref(db,'online/'+sid),{name:myName,busy:true,t:serverTimestamp()});
   gate('','','',false);document.body.classList.add('lis');$('chat').hidden=true;
   $('leave').textContent='Dinlemeyi bırak';$('mic').className='on';$('mic').textContent='Ses açık';
   $('link').textContent=location.href.split('#')[0]+'#dinle/'+R;document.title='Masa · yayın · '+R;
@@ -749,7 +749,7 @@ async function lstop(){
   const R=LS.room,lr=ref(db,`rooms/${R}/listeners/${sid}`);
   LS.unsubs.forEach(f=>f());lclose();if(LS.audio)LS.audio.remove();
   onDisconnect(lr).cancel();remove(lr);
-  set(ref(db,'online/'+sid),{name:myName,busy:false});
+  set(ref(db,'online/'+sid),{name:myName,busy:false,t:serverTimestamp()});
   LS=null;liveOn=false;lisN=0;topic='';
   Object.values(P).forEach(p=>{p.el.remove();p.gone=true;occ[p.i]=null;delete P[p.sid]});
   document.body.classList.remove('lis');$('leave').textContent='Masadan kalk';
@@ -765,9 +765,10 @@ async function goListen(id){
 }
 
 /* ---------- çevrimiçi listesi ve davet ---------- */
-const stale=v=>!!(v&&v.t&&Date.now()+srvOff-v.t>100000);
+const firstSeen={};
+const stale=(v,k)=>{if(!v)return false;if(v.t)return Date.now()+srvOff-v.t>100000;const f=firstSeen[k]=firstSeen[k]||Date.now();return Date.now()-f>100000};
 function renderOnline(){
-  const ids=Object.keys(online).filter(k=>k!==sid&&!stale(online[k])),L=$('ol-list');
+  const ids=Object.keys(online).filter(k=>k!==sid&&!stale(online[k],k)),L=$('ol-list');
   $('ol').textContent='Kişiler ('+ids.length+')';L.textContent='';
   if(!ids.length){L.textContent='Şu an başka kimse çevrimiçi değil.';return}
   ids.forEach(id=>{
@@ -795,13 +796,13 @@ async function reassert(){
   try{
     const ow=ref(db,'owners/'+sid),pr=ref(db,'online/'+sid);
     await set(ow,user.uid);onDisconnect(ow).remove();
-    await set(pr,{name:myName,busy:!!(room||LS)});onDisconnect(pr).remove();
+    await set(pr,{name:myName,busy:!!(room||LS),t:serverTimestamp()});onDisconnect(pr).remove();
     if(room&&P[sid]){
       const i=P[sid].i,sr=ref(db,`rooms/${room}/seats/${i}`),mr=ref(db,`rooms/${room}/members/${sid}`);
       const r=await runTransaction(sr,c=>(c===null||c===sid)?sid:undefined);
       if(!r.committed){flash('Bağlantı koptu ve yerin doldu.');leave(true).then(()=>lobby());return}
       onDisconnect(sr).remove();onDisconnect(mr).remove();
-      await set(mr,{name:myName,seat:i,muted:!micOn});
+      await set(mr,{name:myName,seat:i,muted:!micOn,t:serverTimestamp()});
       if(curMeta){set(ref(db,`rooms/${room}/meta`),curMeta);if(!curMeta.priv)set(ref(db,`lobby/${room}`),Object.assign({topic:curMeta.topic},liveOn?{live:true}:{}))}
     }else if(LS){const lr=ref(db,`rooms/${LS.room}/listeners/${sid}`);await set(lr,{name:myName});onDisconnect(lr).remove()}
     HB();
@@ -811,27 +812,28 @@ async function sweep(){
   if(!db||!user||document.hidden)return;
   const now=Date.now()+srvOff;
   try{
-    for(const k in online)if(k!==sid&&stale(online[k]))remove(ref(db,'online/'+k)).catch(()=>{});
+    for(const k in online)if(k!==sid&&stale(online[k],k))remove(ref(db,'online/'+k)).catch(()=>{});
     for(const id of Object.keys(LB)){
       if(id===room)continue;
       const ms=(await get(ref(db,`rooms/${id}/members`))).val()||{},ks=Object.keys(ms);let live=0;
       for(const k of ks){const m=ms[k];
-        if(m.t&&now-m.t>180000){remove(ref(db,`rooms/${id}/members/${k}`)).catch(()=>{});runTransaction(ref(db,`rooms/${id}/seats/${m.seat}`),c=>c===k?null:undefined).catch(()=>{})}
+        const age=m.t?now-m.t:((noT[id+k]=noT[id+k]||Date.now()),Date.now()-noT[id+k]);
+        if(age>(m.t?180000:100000)){remove(ref(db,`rooms/${id}/members/${k}`)).catch(()=>{});runTransaction(ref(db,`rooms/${id}/seats/${m.seat}`),c=>c===k?null:undefined).catch(()=>{})}
         else live++}
-      if(!ks.length){if(ghost[id])remove(ref(db,`rooms/${id}/seats`)).catch(()=>{});ghost[id]=1}else delete ghost[id];
-      if(!live)closeIfEmpty(id,1000);
+      if(!ks.length){ghost[id]=(ghost[id]||0)+1;if(ghost[id]>=2)remove(ref(db,`rooms/${id}/seats`)).catch(()=>{})}else delete ghost[id];
+      dead[id]=!live&&(ks.length>0||ghost[id]>=2);if(!live)closeIfEmpty(id,1000);renderTables();
     }
   }catch(e){}
 }
 function presence(){
   if(presOn)return;presOn=true;
-  setInterval(HB,30000);setInterval(sweep,45000);setInterval(renderOnline,15000);HB();
+  setInterval(HB,30000);setInterval(sweep,45000);setInterval(renderOnline,15000);HB();setTimeout(sweep,6000);setTimeout(sweep,20000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){HB();reassert()}});
   onValue(ref(db,'.info/connected'),s=>{if(s.val()===true){if(pres0)reassert();pres0=true}});
 }
 
 /* ---------- lobi: konulu masalar, özel masa ---------- */
-let LB={},cnt={},cntU={},ghost={},lobbyOn=false,curMeta=null,pres0=false,presOn=false;
+let LB={},cnt={},cntU={},ghost={},noT={},dead={},lobbyOn=false,curMeta=null,pres0=false,presOn=false;
 function lobby(){
   const inv=!!location.hash;
   gate(inv?(isL()?'Yayına davetlisin':'Masaya davetlisin'):'Bir masa seç',inv?(isL()?'Takma adını yaz, yayını dinle.':'Takma adını yaz, masaya otur.'):'Konusu hoşuna giden masaya otur, yayındaki masayı dinle ya da kendi masanı kur. Adın görünmez, takma adın görünür.',inv&&isL()?'Yayını dinle':'Masaya otur');
@@ -858,7 +860,7 @@ function closeIfEmpty(id,delay){
 }
 function renderTables(){renderSide();renderGate()}
 function renderSide(){
-  const R=$('rl'),ids=Object.keys(LB).filter(id=>cnt[id]>0);R.textContent='';
+  const R=$('rl'),ids=Object.keys(LB).filter(id=>cnt[id]>0&&!dead[id]);R.textContent='';
   $('rc').textContent=ids.length?' ('+ids.length+')':'';
   if(!ids.length){R.textContent='Şu an açık masa yok. İlkini sen kur.';return}
   ids.forEach(id=>{
@@ -879,7 +881,7 @@ async function goRoom(id){
   ask(id);
 }
 function renderGate(){
-  const L=$('tl'),ids=Object.keys(LB).filter(id=>cnt[id]>0&&cnt[id]<10);L.textContent='';
+  const L=$('tl'),ids=Object.keys(LB).filter(id=>cnt[id]>0&&cnt[id]<10&&!dead[id]);L.textContent='';
   if(!ids.length){L.textContent='Şu an açık masa yok. İlkini sen kur.';return}
   ids.forEach(id=>{const r=mk('row'),n=document.createElement('span'),b=document.createElement('button');
     n.textContent='“'+LB[id].topic+'” · '+cnt[id]+'/10';b.textContent='Otur';
